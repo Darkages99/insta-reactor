@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "insta-reactor"
+version = "0.1.0"
+description = "On-demand, deterministic auto-reactor for Instagram reels sent in DMs."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []          # core has zero runtime deps
+
+[project.optional-dependencies]
+device = ["uiautomator2>=3.0"]
+vision = ["opencv-python>=4.8", "numpy>=1.24"]
+
+[project.scripts]
+insta-reactor = "insta_reactor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["insta_reactor*"]

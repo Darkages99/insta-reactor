@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# runtime state (keep the *.example.json, ignore the live ones)
+data/config.json
+data/review_queue.json
+data/calib/
+templates/*.png

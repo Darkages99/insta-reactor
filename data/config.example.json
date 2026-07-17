@@ -1,0 +1,21 @@
+{
+  "profile": {
+    "emoji_prefs": ["💀", "😭", "😂"],
+    "common_replies": ["bro 💀", "nah 😭", "LMAOO", "😭", "💀"],
+    "reply_style": "single",
+    "extra_slang": {"jokes": "LAUGH", "finished": "DEAD"}
+  },
+  "settings": {
+    "min_comments": 20,
+    "comments_to_read": 50,
+    "public_weight": 0.4,
+    "personal_weight": 0.6,
+    "auto_reply_min_confidence": 0.6,
+    "min_top_share": 0.4,
+    "min_margin": 0.12,
+    "like_weight_mode": "log1p",
+    "per_comment_cap": 3
+  },
+  "enabled_chats": ["Best Friend", "Group Chat", "Sarah"],
+  "device_serial": ""
+}

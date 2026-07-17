@@ -1,0 +1,10 @@
+# The deterministic core (engine, rules, runner, CLI, simulation, tests) needs
+# NOTHING here — it is pure standard-library Python 3.10+.
+#
+# These are ONLY needed to drive a real Android phone / emulator:
+uiautomator2>=3.0        # on-device UI automation (taps, swipes, dumps, screenshots)
+
+# Optional: computer-vision fallback for locating icons by appearance.
+# Install only if accessibility selectors aren't enough on your IG version.
+# opencv-python>=4.8
+# numpy>=1.24

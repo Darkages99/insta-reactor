@@ -1,0 +1,6 @@
+text='7:55'                         desc=''                             id=                                                        class=android.widget.TextView             [56,56][138,108]
+text='Sarang D Rajgopaul'           desc=''                             id=                                                        class=android.widget.Button               [325,175][711,225]
+text='always_music_1'               desc=''                             id=                                                        class=android.widget.TextView             [283,662][574,708]
+text='thestevenhe'                  desc=''                             id=                                                        class=android.widget.TextView             [283,1526][578,1572]
+text='Tap to react with any emoji'  desc=''                             id=                                                        class=android.widget.TextView             [158,2396][647,2450]
+text='Message…'                     desc=''                             id=                                                        class=android.widget.EditText             [170,2473][773,2614]

@@ -1,0 +1,76 @@
+{
+  "_comment": "Demo data for `python -m insta_reactor run --simulate data/fixtures.example.json`. Each chat has reels that exercise a different code path.",
+  "chats": {
+    "Best Friend": {
+      "reels": [
+        {
+          "id": "r1_strong_skull",
+          "preceding_text": null,
+          "comment_count": 312,
+          "comments": [
+            {"text": "LMAOO 💀💀", "likes": 240},
+            {"text": "bro im deceased 💀", "likes": 180},
+            {"text": "not me 💀💀💀", "likes": 150},
+            {"text": "this killed me", "likes": 90},
+            {"text": "💀", "likes": 60},
+            {"text": "im dead lmaooo", "likes": 55},
+            {"text": "why is this so accurate 💀", "likes": 40},
+            {"text": "deceased", "likes": 30},
+            {"text": "😭😭 nah", "likes": 25},
+            {"text": "crying fr", "likes": 20},
+            {"text": "😂", "likes": 12},
+            {"text": "this goes hard ngl", "likes": 8},
+            {"text": "💀💀", "likes": 6},
+            {"text": "rip me", "likes": 4},
+            {"text": "im gone", "likes": 3}
+          ]
+        },
+        {
+          "id": "r2_context_text",
+          "preceding_text": "bro this is literally you fr watch till the end",
+          "comment_count": 500,
+          "comments": [{"text": "💀"}, {"text": "😂"}]
+        }
+      ]
+    },
+    "Group Chat": {
+      "reels": [
+        {
+          "id": "r3_too_few",
+          "preceding_text": null,
+          "comment_count": 8,
+          "comments": [
+            {"text": "💀"}, {"text": "lmao"}, {"text": "😭"},
+            {"text": "dead"}, {"text": "😂"}, {"text": "💀"},
+            {"text": "hah"}, {"text": "fr"}
+          ]
+        },
+        {
+          "id": "r4_unreadable",
+          "preceding_text": null,
+          "read_error": true,
+          "comments": null
+        }
+      ]
+    },
+    "Sarah": {
+      "reels": [
+        {
+          "id": "r5_no_consensus",
+          "preceding_text": null,
+          "comment_count": 24,
+          "comments": [
+            {"text": "💀"}, {"text": "💀"}, {"text": "💀"},
+            {"text": "😭"}, {"text": "😭"}, {"text": "😭"},
+            {"text": "😂"}, {"text": "😂"}, {"text": "😂"},
+            {"text": "🔥"}, {"text": "🔥"}, {"text": "🔥"},
+            {"text": "❤️"}, {"text": "❤️"}, {"text": "❤️"},
+            {"text": "no way"}, {"text": "omg"}, {"text": "insane"},
+            {"text": "cute"}, {"text": "wholesome"}, {"text": "love this"},
+            {"text": "mad"}, {"text": "wild"}, {"text": "sheesh"}
+          ]
+        }
+      ]
+    }
+  }
+}
