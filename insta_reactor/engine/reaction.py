@@ -21,6 +21,7 @@ from ..models import (
     ScoreBreakdown,
 )
 from . import scoring
+from .reply_select import select_reply
 
 
 def _flag(ctx: ReelContext, kind: str, reason: str,
@@ -36,7 +37,8 @@ def _flag(ctx: ReelContext, kind: str, reason: str,
     )
 
 
-def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings) -> Decision:
+def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings,
+                    model: "object | None" = None) -> Decision:
     # --- Rule 1: contextual text immediately before the reel ---------------
     if ctx.has_preceding_text:
         preview = (ctx.preceding_text or "").strip()
@@ -62,8 +64,9 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings) -> D
             f"({n}). Read and reply manually.",
         )
 
-    # --- Score the crowd ---------------------------------------------------
-    public_raw = scoring.public_scores(ctx.comments, settings, profile.extra_slang)
+    # --- Score the crowd (rules + optional offline model ensemble) ---------
+    public_raw = scoring.public_scores(
+        ctx.comments, settings, profile.extra_slang, model=model)
     public_norm = scoring._normalize(public_raw)
 
     if not public_norm:
@@ -113,11 +116,14 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings) -> D
             breakdown=breakdown, confidence=confidence,
         )
 
-    # --- High confidence: build a reply that sounds like you --------------
-    reply_text = scoring.build_reply(winner, profile)
+    # --- High confidence: choose the reaction to send ---------------------
+    # Prefer echoing a very-popular comment, else a favourite emoji the crowd
+    # is using, else an emotion-styled reply. See engine/reply_select.py.
+    reply_text, reply_source = select_reply(ctx, winner, profile, settings)
     return Decision(
         action=Action.AUTO_REPLY,
         reply_text=reply_text,
+        reply_source=reply_source,
         winning_emotion=winner,
         confidence=confidence,
         breakdown=breakdown,

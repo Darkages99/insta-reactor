@@ -114,6 +114,17 @@ REEL_REPLY_BAR = [
     {"resource_id": "com.instagram.android:id/reply_bar_edittext"},
 ]
 
+# After swiping right on a message bubble, IG opens the composer pre-loaded with
+# a "replying to" quote chip (with a cancel/close button). Presence of this chip
+# confirms the swipe-to-reply gesture landed on the reel. Best-effort — if none
+# of these match we still try to type+send (the gesture usually succeeds).
+REPLY_QUOTE_INDICATOR = [
+    {"resource_id": "com.instagram.android:id/reply_bar_reply_preview"},
+    {"descContains": "Cancel reply"},
+    {"descContains": "Replying to"},
+    {"textContains": "Replying to"},
+]
+
 # The reply composer inside a plain chat thread (fallback; used only if we ever
 # reply without an open reel viewer).
 CHAT_COMPOSER = [

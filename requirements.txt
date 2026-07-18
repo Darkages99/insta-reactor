@@ -8,3 +8,9 @@ uiautomator2>=3.0        # on-device UI automation (taps, swipes, dumps, screens
 # Install only if accessibility selectors aren't enough on your IG version.
 # opencv-python>=4.8
 # numpy>=1.24
+
+# Optional: the offline emotion model (hybrid ensemble brain). Enable with
+# `run --use-model` or settings.use_model. Runs fully offline on CPU after the
+# first model download (~500 MB, cached locally). Rules-only works without it.
+# transformers>=4.40
+# torch>=2.2

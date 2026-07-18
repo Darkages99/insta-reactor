@@ -83,6 +83,11 @@ class Settings:
 
     min_comments: int = 20            # Rule 2 hard gate
     comments_to_read: int = 50        # how many to scrape per reel
+    # Only the newest N received reels (counting from the bottom of the thread)
+    # are considered "new/unread" and processed. Prevents re-scanning the whole
+    # thread history. Instagram exposes no reliable per-message read flag, so
+    # this newest-N cap is the practical proxy for "unread".
+    max_new_reels: int = 3
     public_weight: float = 0.4        # spec: public_score * 0.4
     personal_weight: float = 0.6      # spec: my_preference * 0.6
     auto_reply_min_confidence: float = 0.6
@@ -96,6 +101,25 @@ class Settings:
     conf_w_margin: float = 0.15
     volume_full_at: int = 40          # comment count at which "volume" saturates
     margin_full_at: float = 0.30      # margin at which the margin term saturates
+
+    # --- offline ML ensemble ------------------------------------------------
+    # The rule/emoji dictionary always votes; when the model is enabled its
+    # per-comment distribution is blended in with this weight (0 => rules only,
+    # identical to the pre-ML behaviour). The meme buckets DEAD/FIRE are still
+    # dominated by the rules because the general model has no class for them.
+    use_model: bool = False           # attempt to load the offline classifier
+    model_name: str = "SamLowe/roberta-base-go_emotions"
+    # 0..1 share given to the model per comment. Kept < 0.5 so the rules keep
+    # the edge on meme buckets (DEAD/FIRE) the model has no class for; raise it
+    # toward 1.0 to trust the model more on ambiguous free-text comments.
+    ensemble_model_weight: float = 0.4
+
+    # --- reply selection ----------------------------------------------------
+    # "Very popular" comments can be echoed back verbatim as the reaction.
+    popular_min_likes: int = 50       # abs. like floor to qualify as "very popular"
+    popular_like_share: float = 0.50  # or owns >= this share of all read likes
+    max_verbatim_len: int = 60        # never echo a comment longer than this
+    prefer_favourite_emoji: bool = True  # bias reply toward your favourites seen in comments
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -197,6 +221,9 @@ class Decision:
     breakdown: Optional[ScoreBreakdown] = None
     chat_name: str = ""
     reel_id: str = ""
+    # How reply_text was chosen: "popular_verbatim" | "favourite_match" |
+    # "emotion" (fallback). Purely for explainability / the summary.
+    reply_source: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)

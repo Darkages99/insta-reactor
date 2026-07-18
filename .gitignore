@@ -10,5 +10,7 @@ venv/
 # runtime state (keep the *.example.json, ignore the live ones)
 data/config.json
 data/review_queue.json
+data/handled_reels.json
 data/calib/
+data/calib_dms/
 templates/*.png

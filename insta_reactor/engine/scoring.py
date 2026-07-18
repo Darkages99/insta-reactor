@@ -49,15 +49,41 @@ def public_scores(
     comments: list[Comment],
     settings: Settings,
     extra_slang: dict[str, str] | None = None,
+    model: "object | None" = None,
 ) -> dict[str, float]:
-    """Weighted, per-comment-capped emotion totals across all comments."""
+    """Weighted, per-comment-capped emotion totals across all comments.
+
+    When `model` (an EmotionClassifier) is supplied, each comment's rule signal
+    is blended with the model's per-comment distribution:
+
+        blended = (1 - w) * rule_dist  +  w * model_dist,  w = ensemble_model_weight
+
+    The rule side keeps DEAD/FIRE strong (the model has no class for them); the
+    model side covers the free-text comments the dictionary can't parse. With
+    `model=None` this is byte-for-byte the original rules-only behaviour.
+    """
     raw: Counter = Counter()
     cap = settings.per_comment_cap
-    for c in comments:
+
+    model_dists = None
+    if model is not None:
+        model_dists = model.classify_batch([c.text for c in comments])
+        mw = min(1.0, max(0.0, settings.ensemble_model_weight))
+        rw = 1.0 - mw
+
+    for i, c in enumerate(comments):
         w = like_weight(c.likes, settings.like_weight_mode)
         sig = signals_for_comment(c.text, extra_slang)
-        for emotion, count in sig.items():
-            raw[emotion] += min(count, cap) * w
+        if model_dists is None:
+            for emotion, count in sig.items():
+                raw[emotion] += min(count, cap) * w
+            continue
+        # ensemble path: blend two per-comment distributions
+        rule_dist = _normalize({e: min(cnt, cap) for e, cnt in sig.items()})
+        model_dist = model_dists[i] if i < len(model_dists) else {}
+        for e in set(rule_dist) | set(model_dist):
+            raw[e] += (rw * rule_dist.get(e, 0.0)
+                       + mw * model_dist.get(e, 0.0)) * w
     return dict(raw)
 
 

@@ -7,6 +7,7 @@ from insta_reactor.config import AppConfig
 from insta_reactor.models import Profile, Settings, Action, FlagKind, ReplyStyle
 from insta_reactor.flags import FlagManager
 from insta_reactor.runner import Runner
+from insta_reactor.seen_store import SeenStore
 
 
 def build_fixture():
@@ -66,15 +67,21 @@ class TestRunnerEndToEnd(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.queue = os.path.join(self.tmp, "queue.json")
+        self.seen = os.path.join(self.tmp, "seen.json")
+
+    def _runner(self, backend, cfg=None, send=True):
+        return Runner(backend, cfg or config(), FlagManager(self.queue),
+                      send=send, seen_store=SeenStore(self.seen))
 
     def test_full_run(self):
         backend = SimulatedBackend(build_fixture())
-        runner = Runner(backend, config(), FlagManager(self.queue))
-        summary = runner.run()
+        summary = self._runner(backend).run()
 
         self.assertEqual(len(summary.auto_replied), 1)
         self.assertEqual(summary.auto_replied[0].reel_id, "r1")
-        self.assertEqual(summary.auto_replied[0].reply_text, "💀")
+        # r1's most-liked comment (90 likes) is echoed back verbatim.
+        self.assertEqual(summary.auto_replied[0].reply_text, "LMAOO 💀💀")
+        self.assertEqual(summary.auto_replied[0].reply_source, "popular_verbatim")
 
         kinds = {d.flag.kind for d in summary.flagged}
         self.assertEqual(kinds, {
@@ -83,21 +90,20 @@ class TestRunnerEndToEnd(unittest.TestCase):
         })
         # exactly one reply was actually "sent"
         self.assertEqual(len(backend.sent), 1)
-        self.assertEqual(backend.sent[0], ("Best Friend", "r1", "💀"))
+        self.assertEqual(backend.sent[0], ("Best Friend", "r1", "LMAOO 💀💀"))
 
     def test_plan_only_sends_nothing(self):
         backend = SimulatedBackend(build_fixture())
-        runner = Runner(backend, config(), FlagManager(self.queue), send=False)
-        summary = runner.run()
+        summary = self._runner(backend, send=False).run()
         self.assertEqual(len(summary.auto_replied), 1)
         self.assertEqual(len(backend.sent), 0)
 
     def test_idempotent_rerun(self):
         backend = SimulatedBackend(build_fixture())
         cfg = config()
-        Runner(backend, cfg, FlagManager(self.queue)).run()
+        self._runner(backend, cfg).run()
         # second run over the same backend: r1 already reacted, nothing new sent
-        summary2 = Runner(backend, cfg, FlagManager(self.queue)).run()
+        summary2 = self._runner(backend, cfg).run()
         self.assertEqual(len(summary2.auto_replied), 0)
         self.assertEqual(len(backend.sent), 1)  # still just the one
 

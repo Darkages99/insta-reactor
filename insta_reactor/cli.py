@@ -158,8 +158,17 @@ def cmd_run(args) -> int:
         print("No chats enabled. Add some with: chats add \"<name>\"")
         return 1
 
+    if args.use_model:
+        config.settings.use_model = True
+    if config.settings.use_model:
+        print("Offline emotion model: ENABLED "
+              f"({config.settings.model_name}, weight "
+              f"{config.settings.ensemble_model_weight})")
+
+    from .seen_store import SeenStore
     runner = Runner(backend, config, FlagManager(args.queue),
-                    send=not args.plan_only)
+                    send=not args.plan_only,
+                    seen_store=SeenStore(args.seen))
     summary = runner.run()
     backend.close()
 
@@ -231,7 +240,12 @@ def build_parser() -> argparse.ArgumentParser:
                     help="decide + summarize but never send")
     sp.add_argument("--verbose", action="store_true",
                     help="print full per-reel reasoning")
+    sp.add_argument("--use-model", action="store_true",
+                    help="enable the offline emotion model for this run "
+                         "(requires: pip install transformers torch)")
     sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
+    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"),
+                    help="path to the persistent already-reacted store")
     sp.set_defaults(func=cmd_run)
 
     sp = sub.add_parser("queue", help="show pending manual-review items")

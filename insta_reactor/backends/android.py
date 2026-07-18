@@ -60,36 +60,46 @@ class AndroidBackend(Backend):
             return False
 
     def iter_reels(self) -> Iterator[tuple[ReelHandle, ReelContext]]:
-        """Sweep the thread top-to-bottom, yielding one reel at a time.
+        """Yield only the newest (unread) reels, newest-first.
 
-        Reels have no stable id and most are off-screen, so we identify each by
-        its *ordinal from the top* — a stable key, because our own replies
-        always append at the very bottom of the thread and never renumber the
-        received reels. For reel #k we re-scroll from the top and skip the k
-        reels we've already handled. This re-scan makes enumeration robust even
-        when sending a reply bounces the thread to the bottom.
+        We do NOT sweep the whole thread history — that would re-scan reels the
+        user has already seen and reacted to. Instead we anchor at the *bottom*
+        of the thread and walk upward, handling at most `max_new_reels` received
+        reels. Instagram exposes no reliable per-message read flag, so this
+        newest-N cap is the practical proxy for "unread".
+
+        Reels have no stable id, so we identify each by its *ordinal from the
+        bottom* — a stable key within a run, because reading a reel adds no new
+        incoming reel bubble (our replies are outgoing and never counted). For
+        reel #k we re-anchor at the bottom and skip the k newer reels already
+        handled. Reading a reel (open → comments → back) does NOT reliably
+        restore scroll position, so re-anchoring from a fixed edge each time is
+        what survived testing against the live app.
 
         Each yielded reel is left open in the reel viewer (unless it was
         short-circuited by preceding text); the runner then calls send_reply
         (which replies from the viewer, tagging the reel) or discard_reel.
-
-        Reels are identified by their *ordinal from the top* — a stable key,
-        because our own replies always append at the very bottom of the thread
-        and never renumber the received reels. Reading a reel (open → comments →
-        back) does NOT reliably return to the same scroll position, so we can't
-        keep an on-screen cursor; instead we re-locate reel #k from a fixed
-        anchor (the top of the thread) each time, skipping the k reels already
-        handled. This is O(n²) in scrolling but robust — the only design that
-        survived testing against the live app.
         """
+        max_new = getattr(self.config.settings, "max_new_reels", 3)
+        limit = min(max_new, _MAX_REELS)
         k = 0
-        while k < _MAX_REELS:
-            node = self._locate_nth_reel(k)
+        while k < limit:
+            node = self._locate_nth_reel_from_bottom(k)
             if node is None:
-                log.info("no reel #%d — thread has %d reel(s)", k, k)
+                log.info("no new reel #%d from bottom — handled %d new reel(s)",
+                         k, k)
                 return
-            reel_id = f"reel#{k}"
-            log.info("located reel #%d (top=%d), reading…", k, node.bounds[1])
+            # Revisit guard: if your reply already sits right below this reel,
+            # it's handled — skip it and walk to older, still-unanswered reels
+            # instead of re-opening and re-reacting. (Cross-run dedup by comment
+            # signature is a second safety net in the runner.)
+            if self._has_outgoing_reply_after(node):
+                log.info("new reel #%d already answered — skipping", k)
+                k += 1
+                continue
+            reel_id = f"newreel#{k}"
+            log.info("located new reel #%d from bottom (top=%d), reading…",
+                     k, node.bounds[1])
             yield ReelHandle(reel_id=reel_id, locator=node), \
                 self._read_reel(node, reel_id)
             k += 1
@@ -111,29 +121,29 @@ class AndroidBackend(Backend):
         if not isinstance(node, UiNode):
             return ReelContext(chat_name=self._chat, reel_id=reel.reel_id,
                                read_error=True)
-        ctx = self._read_reel(node, reel.reel_id)
-        self.nav.back_to_chat()
-        return ctx
+        # _read_reel already returns us to the thread when it finishes.
+        return self._read_reel(node, reel.reel_id)
 
     def send_reply(self, reel: ReelHandle, text: str) -> bool:
-        """Reply from the open reel viewer so the message is attached to this
-        reel, then return to the thread."""
-        try:
-            if self.nav.detect_state() != State.REEL_VIEWER:
-                # reel wasn't left open (shouldn't happen for auto-replies);
-                # nothing safe to tag, so fail loudly rather than sending a
-                # floating, un-attributed message.
-                return False
-            ok = self.nav.reply_in_reel_viewer(text)
-        finally:
-            self.nav.back_to_chat()
-        return ok
+        """React to the reel by swiping right on its bubble in the thread.
+
+        After `_read_reel` we're back in the thread with the reel bubble at its
+        original position (opening a reel preserves scroll). Swiping right on it
+        quotes the reel in the composer, so the reply is attached to *this* reel.
+        """
+        node = reel.locator if isinstance(reel.locator, UiNode) else None
+        if node is None:
+            return False
+        if self.nav.detect_state() != State.CHAT and not self.nav.back_to_chat():
+            return False
+        target = self._relocate_reel_node(node) or node
+        return self.nav.react_to_reel(target, text)
 
     def discard_reel(self, reel: ReelHandle) -> None:
-        """Close the reel viewer (if open) and return to the thread so the
-        sweep can continue. Reading a reel preserves scroll position, so no
-        re-anchor is needed here."""
-        self.nav.back_to_chat()
+        """Return to the thread so the sweep can continue. `_read_reel` already
+        leaves us in the thread; this is a defensive no-op-ish safety net."""
+        if self.nav.detect_state() != State.CHAT:
+            self.nav.back_to_chat()
 
     def return_to_inbox(self) -> None:
         try:
@@ -186,6 +196,53 @@ class AndroidBackend(Backend):
         self.nav.scroll_thread_to_top()
         return True
 
+    def _anchor_chat_bottom(self) -> bool:
+        """Return to the open thread and scroll it to the newest message — the
+        fixed anchor that newest-first reel enumeration counts up from. Mirrors
+        _anchor_chat_top; rebuilds the thread from the inbox if we got lost."""
+        if self.nav.detect_state() != State.CHAT and not self.nav.back_to_chat():
+            try:
+                self.nav.recover_to_inbox()
+                self.nav.open_chat(self._chat)
+            except NavigationError:
+                return False
+        if self.nav.detect_state() != State.CHAT:
+            return False
+        self.nav.scroll_thread_to_bottom()
+        return True
+
+    def _locate_nth_reel_from_bottom(self, k: int) -> UiNode | None:
+        """Scroll from the bottom and return the (k)-th incoming reel counting
+        from the newest (0-based), or None if there are fewer than k+1 reels."""
+        if not self._anchor_chat_bottom():
+            return None
+        w, h = self.d.window_size()
+        zt, zb = int(h * _ZONE_TOP), int(h * _ZONE_BOTTOM)
+
+        skipped = 0
+        for _ in range(_MAX_SWEEP_STEPS):
+            reels = self._loosely_visible_reels(zt, zb)
+            if reels:
+                newest = reels[-1]          # largest y => closest to bottom
+                if skipped == k:
+                    return newest
+                # advance the cursor: push this reel below the fold so the next
+                # scan's bottom-most reel is the preceding (older) one.
+                before_bottom = newest.bounds[3]
+                self.nav.scroll_node_below_fold(before_bottom, zb)
+                skipped += 1
+                continue
+            # nothing visible in the band — reveal older messages above.
+            if not self.nav.thread_scroll_up():
+                # at the very top: count any remaining fully-visible reels,
+                # newest (bottom-most) first.
+                for n in reversed(self._fully_visible_reels(zt, zb)):
+                    if skipped == k:
+                        return n
+                    skipped += 1
+                return None   # genuinely fewer than k+1 reels
+        return None
+
     def _locate_nth_reel(self, k: int) -> UiNode | None:
         """Scroll from the top and return the (k)-th incoming reel (0-based),
         or None if there are fewer than k+1 reels in the thread."""
@@ -221,8 +278,12 @@ class AndroidBackend(Backend):
         return None
 
     def _read_reel(self, node: UiNode, reel_id: str) -> ReelContext:
-        """Open `node`, apply Rule 1, read comments. On success the reel viewer
-        is left OPEN (comments closed) so a reply can be attached to it."""
+        """Open `node`, apply Rule 1, read comments, then RETURN TO THE THREAD.
+
+        We react by swiping right on the reel bubble in the thread (not from the
+        viewer), so this always leaves us back in the CHAT state with the bubble
+        available. Opening a reel preserves the thread's scroll position, so the
+        original `node` bounds stay valid for the subsequent swipe-to-react."""
         try:
             preceding = self._preceding_text_for_node(node)
             if preceding:
@@ -240,13 +301,14 @@ class AndroidBackend(Backend):
                                    read_error=True)
 
             if not self.nav.open_comments():
-                # leave the reel viewer open; runner will discard it.
+                self.nav.back_to_chat()
                 return ReelContext(chat_name=self._chat, reel_id=reel_id,
                                    read_error=True)
 
             comments, count = self.collector.collect(
                 limit=self.config.settings.comments_to_read)
-            self.nav.close_comments()   # back to reel viewer, kept open
+            # comments sheet -> reel viewer -> thread
+            self.nav.back_to_chat()
 
             return ReelContext(
                 chat_name=self._chat, reel_id=reel_id,
@@ -258,6 +320,36 @@ class AndroidBackend(Backend):
             self.nav.back_to_chat()
             return ReelContext(chat_name=self._chat, reel_id=reel_id,
                                read_error=True)
+
+    def _has_outgoing_reply_after(self, node: UiNode) -> bool:
+        """True if an outgoing (right-aligned) message sits just below this reel
+        — i.e. you've already replied to it. Best-effort revisit guard."""
+        w, _ = self.d.window_size()
+        reel_bottom = node.bounds[3]
+        for tv in self.d.find_all(className="android.widget.TextView"):
+            txt = (tv.text or "").strip()
+            if not txt:
+                continue
+            l, t, r, b = tv.bounds
+            cx = (l + r) // 2
+            outgoing = cx > w / 2          # your messages are right-aligned
+            gap = t - reel_bottom
+            if outgoing and 0 <= gap < 240:
+                return True
+        return False
+
+    def _relocate_reel_node(self, node: UiNode) -> UiNode | None:
+        """Find the on-screen reel bubble closest to `node` (fresh bounds after
+        navigation). Returns None if no reel bubble is currently visible."""
+        cx0, cy0 = node.center
+        best, best_d = None, 10 ** 18
+        for n in self.d.find_all(
+                resource_id="com.instagram.android:id/reel_share_item_view"):
+            cx, cy = n.center
+            d = (cx - cx0) ** 2 + (cy - cy0) ** 2
+            if d < best_d:
+                best, best_d = n, d
+        return best
 
     def _preceding_text_for_node(self, node: UiNode) -> str | None:
         """Return the incoming text message immediately above the reel, if any.

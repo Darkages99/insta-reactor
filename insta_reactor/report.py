@@ -22,9 +22,10 @@ def explain(decision: Decision) -> str:
     lines.append(head)
     if decision.action == Action.AUTO_REPLY:
         emoji = CANON_EMOJI.get(decision.winning_emotion or "", "")
+        src = f", via={decision.reply_source}" if decision.reply_source else ""
         lines.append(f"  -> AUTO-REPLY: {decision.reply_text!r}  "
                      f"(emotion={decision.winning_emotion} {emoji}, "
-                     f"confidence={decision.confidence:.0%})")
+                     f"confidence={decision.confidence:.0%}{src})")
     else:
         kind = decision.flag.kind if decision.flag else "?"
         reason = decision.flag.reason if decision.flag else ""

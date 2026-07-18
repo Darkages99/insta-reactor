@@ -13,7 +13,9 @@ import logging
 from .backends.base import Backend
 from .config import AppConfig
 from .engine.reaction import decide_reaction
+from .engine.classifier import build_model
 from .flags import FlagManager
+from .seen_store import SeenStore, signature
 from .models import (
     Decision, Action, Flag, FlagKind, RunSummary,
 )
@@ -24,12 +26,17 @@ log = logging.getLogger("insta_reactor.runner")
 class Runner:
     def __init__(self, backend: Backend, config: AppConfig,
                  flag_manager: FlagManager | None = None,
-                 send: bool = True):
+                 send: bool = True,
+                 seen_store: SeenStore | None = None):
         self.backend = backend
         self.config = config
         self.flags = flag_manager or FlagManager()
         # send=False => "plan only": decide everything but never actually send.
         self.send = send
+        # Persistent cross-run dedup so we never re-react to the same reel.
+        self.seen = seen_store if seen_store is not None else SeenStore()
+        # Offline emotion model (None unless enabled+installed => rules only).
+        self.model = build_model(config.settings)
 
     def run(self) -> RunSummary:
         summary = RunSummary()
@@ -55,6 +62,7 @@ class Runner:
                     log.exception("failed returning to inbox after %r", chat_name)
 
         self.flags.save()
+        self.seen.save()
         return summary
 
     def _process_chat(self, chat_name: str, summary: RunSummary) -> None:
@@ -73,7 +81,18 @@ class Runner:
         seen = 0
         for reel, ctx in self.backend.iter_reels():
             seen += 1
-            decision = decide_reaction(ctx, self.config.profile, self.config.settings)
+
+            # Cross-run dedup: if we've reacted to this exact reel before
+            # (identified by its comment signature), don't touch it again.
+            sig = signature(chat_name, ctx.comments)
+            if self.seen.is_reacted(sig):
+                log.info("skipping already-reacted reel %s in %r",
+                         reel.reel_id, chat_name)
+                self.backend.discard_reel(reel)
+                continue
+
+            decision = decide_reaction(
+                ctx, self.config.profile, self.config.settings, model=self.model)
             # Make sure every decision carries identifying info so the review
             # queue and summary can name it (decide_reaction doesn't know the
             # chat, and some flag paths leave reel_id blank).
@@ -84,6 +103,7 @@ class Runner:
             if decision.action == Action.AUTO_REPLY and self.send:
                 if self.backend.send_reply(reel, decision.reply_text or ""):
                     replied = True
+                    self.seen.mark(sig)   # remember so we never re-react
                 else:
                     decision = Decision(
                         action=Action.FLAG,

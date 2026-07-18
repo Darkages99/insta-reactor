@@ -11,9 +11,10 @@ from __future__ import annotations
 import logging
 import re
 
-from ..device.base import Device
+from ..device.base import Device, UiNode
 from ..models import Comment
 from ..automation import selectors as S
+from ..engine.comment_filter import is_reactable_comment
 
 log = logging.getLogger("insta_reactor.collector")
 
@@ -47,16 +48,49 @@ class CommentCollector:
         self.d = device
         self.settle = settle
 
+    def _like_nodes(self) -> list[UiNode]:
+        """All visible per-comment like-count elements (best-effort)."""
+        for matcher in S.COMMENT_LIKE_COUNT:
+            nodes = self.d.find_all(**matcher)
+            if nodes:
+                return nodes
+        return []
+
+    def _likes_for_row(self, row: UiNode, like_nodes: list[UiNode]) -> int:
+        """Associate a like-count element with a comment row by geometry.
+
+        IG renders the like count just under the comment text, left-aligned with
+        it. We take the like node whose top sits at/below the row's top and is
+        closest to it. Best-effort: returns 0 when nothing plausible is found.
+        """
+        _, row_top, _, row_bottom = row.bounds
+        best_likes, best_dy = 0, 10 ** 9
+        for ln in like_nodes:
+            _, lt, _, _ = ln.bounds
+            dy = lt - row_top
+            # like count belongs to this row if it's within a comment's height
+            # below the row's top and nearer than any other row we've seen.
+            if -10 <= dy <= (row_bottom - row_top) + 160 and dy < best_dy:
+                likes = _parse_like_count(ln.text or ln.desc or "")
+                if likes > 0:
+                    best_likes, best_dy = likes, dy
+        return best_likes
+
     def _visible_comments(self) -> list[Comment]:
         rows: list[Comment] = []
+        like_nodes = self._like_nodes()
         for matcher in S.COMMENT_ROW_TEXT:
             nodes = self.d.find_all(**matcher)
             if nodes:
                 for n in nodes:
                     txt = (n.text or n.desc or "").strip()
                     txt = _strip_said_prefix(txt)
-                    if txt:
-                        rows.append(Comment(text=txt, likes=0))
+                    # Drop image/gif/sticker/artifact rows — only text/emoji
+                    # comments carry a reaction signal.
+                    if not is_reactable_comment(txt):
+                        continue
+                    likes = self._likes_for_row(n, like_nodes) if like_nodes else 0
+                    rows.append(Comment(text=txt, likes=likes))
                 break
         return rows
 
@@ -69,19 +103,24 @@ class CommentCollector:
         import time
 
         w, h = self.d.window_size()
-        seen: set[str] = set()
-        collected: list[Comment] = []
+        by_text: dict[str, Comment] = {}
+        order: list[str] = []
 
         for _ in range(max_scrolls):
             for c in self._visible_comments():
                 key = c.text
-                if key not in seen:
-                    seen.add(key)
-                    collected.append(c)
-            if len(collected) >= limit:
+                if key not in by_text:
+                    by_text[key] = c
+                    order.append(key)
+                elif c.likes > by_text[key].likes:
+                    # a later scroll window may reveal this row's like count
+                    # (it can be off-screen the first time) — keep the max.
+                    by_text[key].likes = c.likes
+            if len(order) >= limit:
                 break
             # scroll up within the comments sheet (bottom -> top of gesture)
             self.d.swipe(w // 2, int(h * 0.72), w // 2, int(h * 0.32), 0.25)
             time.sleep(self.settle)
 
+        collected = [by_text[k] for k in order]
         return collected[:limit], len(collected)
