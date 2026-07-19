@@ -69,3 +69,20 @@ in the app.
 
 Once we have that, P1 turns these primitives into the `AccessibilityDevice`
 that satisfies the `Device` ABC.
+
+## P1 device bridge (done)
+
+`ReactorAccessibilityService` now also exposes a **synchronous, primitive-only
+bridge** that the Python `AccessibilityDevice`
+(`insta_reactor/device/accessibility_device.py`) calls via Chaquopy to satisfy
+the `Device` ABC: `currentPackage()`, `windowSize()`, `nodesJson()`, `tap()`,
+`longPress()`, `swipe()`, `inputText()`, `pressBack()`, `pressHome()`,
+`startApp()`. The node contract is a JSON array (one flat object per node in
+depth-first pre-order) mirrored on both sides.
+
+Gesture methods **block until the gesture completes** (they post the dispatch to
+the main thread and await a `CountDownLatch`), so Python's blocking `Device` API
+works — therefore they **must be called off the main thread**. Under Chaquopy
+the engine runs on a background thread, so that holds. The P0 overlay/dump path
+is unchanged. Actual Chaquopy embedding of the Python engine is P3 (the app
+shell) — this module just provides the Kotlin surface P3 will bind to.

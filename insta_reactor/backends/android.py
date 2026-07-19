@@ -20,7 +20,7 @@ from collections.abc import Iterator
 from .base import Backend, ReelHandle
 from ..config import AppConfig
 from ..models import ReelContext, Comment
-from ..device.u2_device import U2Device
+from ..device.factory import build_device
 from ..device.base import UiNode
 from ..automation.navigator import Navigator, NavigationError
 from ..automation import selectors as S
@@ -73,7 +73,10 @@ def _is_ui_chrome_or_label(txt: str) -> bool:
 class AndroidBackend(Backend):
     def __init__(self, config: AppConfig, device=None):
         self.config = config
-        self.d = device or U2Device(config.device_serial)
+        # V3 (on-device) passes an AccessibilityDevice here; the PC path leaves
+        # it None and build_device() lazily constructs U2Device. See
+        # device/factory.py.
+        self.d = device or build_device(config)
         self.nav = Navigator(self.d)
         self.collector = CommentCollector(self.d)
         self._chat = ""
