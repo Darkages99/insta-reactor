@@ -81,7 +81,7 @@ class Profile:
 class Settings:
     """Deterministic knobs. Defaults chosen to match the spec's examples."""
 
-    min_comments: int = 20            # Rule 2 hard gate
+    min_comments: int = 15            # Rule 2 hard gate
     comments_to_read: int = 50        # how many to scrape per reel
     # Only the newest N received reels (counting from the bottom of the thread)
     # are considered "new/unread" and processed. Prevents re-scanning the whole
@@ -118,7 +118,12 @@ class Settings:
     # "Very popular" comments can be echoed back verbatim as the reaction.
     popular_min_likes: int = 50       # abs. like floor to qualify as "very popular"
     popular_like_share: float = 0.50  # or owns >= this share of all read likes
-    max_verbatim_len: int = 60        # never echo a comment longer than this
+    # Kept short on purpose: a short comment ("LMAOO 💀💀") is a generic reaction
+    # that reads naturally coming from you. A long one is usually a specific
+    # reference/question/take on the video's content (or spam), and echoing it
+    # verbatim as if it's your own reaction is often wrong. The longer the
+    # comment, the less likely it's a safe, generic echo — so this stays tight.
+    max_verbatim_len: int = 24        # never echo a comment longer than this
     prefer_favourite_emoji: bool = True  # bias reply toward your favourites seen in comments
 
     def to_dict(self) -> dict:
@@ -156,6 +161,8 @@ class ReelContext:
     reel_id: str = ""                       # stable-ish handle for logging
     has_preceding_text: bool = False        # Rule 1
     preceding_text: Optional[str] = None
+    has_following_text: bool = False        # Rule 1b: sender's own follow-up
+    following_text: Optional[str] = None
     comments: Optional[list[Comment]] = None  # None => could not read (error)
     comment_count: Optional[int] = None     # reported total (may exceed len(comments))
     read_error: bool = False

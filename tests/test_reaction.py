@@ -32,6 +32,13 @@ class TestRules(unittest.TestCase):
         self.assertEqual(d.action, Action.FLAG)
         self.assertEqual(d.flag.kind, FlagKind.CONTEXT_TEXT)
 
+    def test_rule1b_following_text_flags(self):
+        ctx = make([Comment("💀")] * 30, has_following_text=True,
+                   following_text="lol remember when we did this")
+        d = decide_reaction(ctx, self.p, self.s)
+        self.assertEqual(d.action, Action.FLAG)
+        self.assertEqual(d.flag.kind, FlagKind.CONTEXT_TEXT)
+
     def test_unable_to_read(self):
         ctx = make(None, read_error=True)
         d = decide_reaction(ctx, self.p, self.s)

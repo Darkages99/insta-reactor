@@ -14,3 +14,7 @@ data/handled_reels.json
 data/calib/
 data/calib_dms/
 templates/*.png
+
+# IDE
+.idea/
+

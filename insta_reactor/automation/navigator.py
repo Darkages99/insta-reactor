@@ -127,42 +127,89 @@ class Navigator:
             raise NavigationError("could not reach inbox")
 
     def open_chat(self, chat_name: str, attempts: int = 2) -> bool:
-        """Open a conversation by its display name."""
-        for _ in range(attempts):
-            self.ensure_inbox()
-            # Prefer tapping the thread row directly if it's already visible
-            # in the inbox list — always opens the DM thread. The top search
-            # bar is IG's universal ("Ask Meta AI") search, whose result rows
-            # open the account's *profile*, not the thread, so it's only a
-            # fallback for chats buried too far down to be on-screen.
-            row = (self.d.find(resource_id="com.instagram.android:id/row_inbox_username",
-                                text=chat_name)
-                   or self.d.find(text=chat_name))
-            if row:
-                self.d.tap_node(row)
-                if self.wait_for_state(State.CHAT):
-                    return True
-                self.d.press_back()
-                self._pause()
-                continue
+        """Open a conversation by its display name.
 
-            search = self._find_any(S.INBOX_SEARCH)
-            if not search:
+        Scrolls the inbox thread list top-to-bottom looking for the row —
+        NOT just whatever happens to be on screen when we arrive. A thread
+        buried below the fold is a normal, expected case (most real inboxes
+        have more threads than fit one screen), not a fallback-worthy one.
+        """
+        for attempt in range(attempts):
+            self.ensure_inbox()
+            row = self._find_inbox_row(chat_name)
+            if row:
+                log.info("open_chat %r: row visible without scrolling", chat_name)
+            else:
+                log.info("open_chat %r: not immediately visible, scanning inbox…",
+                          chat_name)
+                row = self._scan_inbox_for_row(chat_name)
+            if not row:
+                log.info("open_chat %r: row not found (attempt %d/%d)",
+                          chat_name, attempt + 1, attempts)
                 self._pause()
                 continue
-            self.d.tap_node(search)
-            self._pause()
-            self.d.input_text(chat_name)
-            self._pause(1.2)
-            result = self.d.find(text=chat_name) or self.d.find(textContains=chat_name)
-            if result:
-                self.d.tap_node(result)
-                if self.wait_for_state(State.CHAT):
-                    return True
-            # not found -> back out and retry
+            self.d.tap_node(row)
+            if self.wait_for_state(State.CHAT):
+                log.info("open_chat %r: reached State.CHAT", chat_name)
+                return True
+            log.info("open_chat %r: tapped row but never reached State.CHAT "
+                      "(attempt %d/%d)", chat_name, attempt + 1, attempts)
             self.d.press_back()
             self._pause()
         return False
+
+    def _find_inbox_row(self, chat_name: str) -> UiNode | None:
+        return (self.d.find(resource_id="com.instagram.android:id/row_inbox_username",
+                             text=chat_name)
+                or self.d.find(text=chat_name))
+
+    def _inbox_row_signature(self) -> tuple:
+        """Cheap fingerprint of the visible inbox rows, to detect when
+        scrolling stops making progress (reached the bottom of the list)."""
+        nodes = self.d.find_all(
+            resource_id="com.instagram.android:id/row_inbox_username")
+        return tuple((n.text, n.bounds[1]) for n in nodes)
+
+    def scroll_inbox_to_top(self, max_swipes: int = 10) -> None:
+        """Scroll the inbox thread list up to the newest (top) thread."""
+        w, h = self.d.window_size()
+        last = None
+        for _ in range(max_swipes):
+            sig = self._inbox_row_signature()
+            if sig == last:
+                return
+            last = sig
+            self.d.swipe(w // 2, int(h * 0.30), w // 2, int(h * 0.80), 0.30)
+            self._pause(0.5)
+
+    def _scan_inbox_for_row(self, chat_name: str, max_swipes: int = 20) -> UiNode | None:
+        """Scroll the inbox downward looking for `chat_name`'s row.
+
+        Re-anchors at the top first so this is deterministic regardless of
+        wherever the list happened to be scrolled to already, then walks
+        down one screen at a time until the row appears or the list stops
+        advancing (we've reached the bottom without finding it).
+        """
+        self.scroll_inbox_to_top()
+        w, h = self.d.window_size()
+        last = None
+        for step in range(max_swipes):
+            row = self._find_inbox_row(chat_name)
+            if row:
+                log.info("_scan_inbox_for_row %r: found after %d scroll(s)",
+                          chat_name, step)
+                return row
+            sig = self._inbox_row_signature()
+            if sig == last:
+                log.info("_scan_inbox_for_row %r: reached end of list after "
+                          "%d scroll(s), not found", chat_name, step)
+                return None
+            last = sig
+            self.d.swipe(w // 2, int(h * 0.75), w // 2, int(h * 0.30), 0.30)
+            self._pause(0.5)
+        log.info("_scan_inbox_for_row %r: hit max_swipes=%d without finding it",
+                  chat_name, max_swipes)
+        return None
 
     def open_comments(self) -> bool:
         btn = self._find_any(S.OPEN_COMMENTS_BUTTON)

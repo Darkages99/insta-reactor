@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 
@@ -27,7 +28,7 @@ from .config import (
 from .models import Profile, Settings, ReplyStyle
 from .flags import FlagManager
 from .runner import Runner
-from .report import summarize, explain
+from .report import summarize, explain, to_dict
 from .backends.simulated import SimulatedBackend
 
 
@@ -138,6 +139,9 @@ def _build_backend(args, config: AppConfig):
 
 
 def cmd_run(args) -> int:
+    if args.debug:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     config = load_config(args.config)
 
     # In simulate mode we can synthesize enabled_chats from the fixture so a
@@ -172,13 +176,30 @@ def cmd_run(args) -> int:
     summary = runner.run()
     backend.close()
 
-    print(summarize(summary, verbose=args.verbose))
+    if args.json:
+        print(json.dumps(to_dict(summary, plan_only=args.plan_only)))
+        return 0
+
+    print(summarize(summary, verbose=args.verbose, plan_only=args.plan_only))
     if args.plan_only:
         print("(plan-only: nothing was actually sent)")
     if summary.flagged:
         print(f"\n{len(summary.flagged)} reel(s) need your attention — "
               f"saved to {args.queue}")
         print("Review them anytime with:  python -m insta_reactor queue")
+    return 0
+
+
+def cmd_webui(args) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    config = load_config(args.config)
+    if args.ntfy_topic:
+        config.ntfy_topic = args.ntfy_topic
+        save_config(config, args.config)
+
+    from .webui import run_server
+    run_server(args.config, args.queue, args.seen, port=args.port)
     return 0
 
 
@@ -243,10 +264,25 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--use-model", action="store_true",
                     help="enable the offline emotion model for this run "
                          "(requires: pip install transformers torch)")
+    sp.add_argument("--debug", action="store_true",
+                    help="print live navigation/state-machine logging "
+                         "(what it's doing on-device, step by step)")
+    sp.add_argument("--json", action="store_true",
+                    help="print a single JSON summary line instead of human "
+                         "text (for the phone app / scripting)")
     sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
     sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"),
                     help="path to the persistent already-reacted store")
     sp.set_defaults(func=cmd_run)
+
+    sp = sub.add_parser("webui", help="phone-facing control panel: pick chats, tap Run")
+    sp.add_argument("--port", type=int, default=8765)
+    sp.add_argument("--ntfy-topic", default="",
+                    help="ntfy.sh topic for error/unsure push notifications "
+                         "(saved to config.json once set)")
+    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
+    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"))
+    sp.set_defaults(func=cmd_webui)
 
     sp = sub.add_parser("queue", help="show pending manual-review items")
     sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))

@@ -48,6 +48,18 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings,
             f"This reel has contextual text{extra}. Read and reply manually.",
         )
 
+    # --- Rule 1b: sender's own follow-up text right after the reel ---------
+    # Usually means an inside joke or specific comment about the reel that
+    # needs a human, not a generic crowd-matched reaction.
+    if ctx.has_following_text:
+        preview = (ctx.following_text or "").strip()
+        extra = f' ("{preview}")' if preview else ""
+        return _flag(
+            ctx, FlagKind.CONTEXT_TEXT,
+            f"Sender followed this reel with a message{extra}. "
+            f"Read and reply manually.",
+        )
+
     # --- Could we even read the comments? ---------------------------------
     if ctx.read_error or ctx.comments is None:
         return _flag(

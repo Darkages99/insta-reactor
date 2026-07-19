@@ -14,6 +14,7 @@ we never crash the run or guess.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterator
 
 from .base import Backend, ReelHandle
@@ -35,6 +36,38 @@ _ZONE_TOP = 0.16
 _ZONE_BOTTOM = 0.82
 _MAX_SWEEP_STEPS = 60   # hard cap on scroll+scan iterations per reel lookup
 _MAX_REELS = 40         # absolute cap on reels handled per thread (safety)
+
+# Known IG UI hint strings that render as TextViews near a shared reel but are
+# not chat messages at all (tap/hold hints, reaction hints, etc).
+_UI_HINT_STRINGS = {
+    "tap and hold to react",
+    "double tap to react",
+    "tap to react",
+}
+
+_HANDLE_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._]{0,28}[a-z0-9])?$")
+
+
+def _is_ui_chrome_or_label(txt: str) -> bool:
+    """True if `txt` is Instagram UI chrome (a tap/hold hint) or an account
+    attribution label (e.g. "modern.aphorism") rather than an actual DM sent
+    by a person. Both render as plain TextViews right next to a shared reel
+    bubble, same as a real message would, so geometry alone can't tell them
+    apart — we need to look at the text itself.
+
+    A real DM almost never looks like an IG handle: handles have no spaces
+    and are built from lowercase letters/digits/dots/underscores, usually
+    with a "." or "_" in them. Casual chat text ("lol", "same", "😭") either
+    has spaces, mixed case, punctuation, or emoji that a handle can't have.
+    """
+    low = txt.strip().lower()
+    if low in _UI_HINT_STRINGS:
+        return True
+    if " " in txt:
+        return False
+    if ("." in txt or "_" in txt) and _HANDLE_RE.match(low):
+        return True
+    return False
 
 
 class AndroidBackend(Backend):
@@ -294,6 +327,16 @@ class AndroidBackend(Backend):
                     comments=[], comment_count=0,
                 )
 
+            following = self._following_text_for_node(node)
+            if following:
+                # Rule 1b: sender's own follow-up right after the reel —
+                # usually an inside joke needing a human reply.
+                return ReelContext(
+                    chat_name=self._chat, reel_id=reel_id,
+                    has_following_text=True, following_text=following,
+                    comments=[], comment_count=0,
+                )
+
             self.d.tap_node(node)
             if not self.nav.wait_for_state(State.REEL_VIEWER):
                 self.nav.back_to_chat()
@@ -364,7 +407,7 @@ class AndroidBackend(Backend):
         best_bottom = -1
         for tv in self.d.find_all(className="android.widget.TextView"):
             txt = (tv.text or "").strip()
-            if not txt:
+            if not txt or _is_ui_chrome_or_label(txt):
                 continue
             l, t, r, b = tv.bounds
             cx = (l + r) // 2
@@ -372,5 +415,32 @@ class AndroidBackend(Backend):
             gap = reel_top - b
             if incoming and 0 <= gap < 220 and b > best_bottom:
                 best_bottom = b
+                best_text = txt
+        return best_text
+
+    def _following_text_for_node(self, node: UiNode) -> str | None:
+        """Return the incoming text message immediately after the reel, if any.
+
+        Rule 1b: the sender's own follow-up right after sharing a reel usually
+        carries an inside joke or specific comment, so we must NOT automate.
+        We look for an incoming (left-aligned) text bubble whose top edge sits
+        just below the reel's bottom edge. Must be called before we've sent
+        any reply of our own, so any incoming bubble found here predates and
+        is unrelated to our own (outgoing, right-aligned) reply.
+        """
+        width, _ = self.d.window_size()
+        reel_bottom = node.bounds[3]
+        best_text = None
+        best_top = 10 ** 9
+        for tv in self.d.find_all(className="android.widget.TextView"):
+            txt = (tv.text or "").strip()
+            if not txt or _is_ui_chrome_or_label(txt):
+                continue
+            l, t, r, b = tv.bounds
+            cx = (l + r) // 2
+            incoming = cx < width / 2
+            gap = t - reel_bottom
+            if incoming and 0 <= gap < 220 and t < best_top:
+                best_top = t
                 best_text = txt
         return best_text

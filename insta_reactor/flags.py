@@ -40,9 +40,12 @@ class FlagManager:
 
     def _load(self) -> None:
         if os.path.exists(self.path):
-            with open(self.path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            self.items = [ReviewItem(**it) for it in data]
+            try:
+                with open(self.path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self.items = [ReviewItem(**it) for it in data]
+            except (ValueError, OSError, TypeError):
+                self.items = []
 
     def save(self) -> None:
         os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)

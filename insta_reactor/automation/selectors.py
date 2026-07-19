@@ -66,6 +66,12 @@ INBOX_TAB_BUTTON = [
     {"desc": "Message"},
 ]
 
+# NOTE: currently unused by navigator.open_chat — it used to fall back to this
+# global search bar, but that bar is IG's universal ("Ask Meta AI") search,
+# whose result rows open the account's *profile*, not the thread, so tapping a
+# result there could never reach State.CHAT. open_chat now scrolls the inbox
+# list instead (see Navigator._scan_inbox_for_row). Kept here in case Phase 2
+# calibration finds an inbox-internal thread filter distinct from this bar.
 INBOX_SEARCH = [
     {"desc": "Search"},
     {"resource_id": "com.instagram.android:id/action_bar_search_edit_text"},

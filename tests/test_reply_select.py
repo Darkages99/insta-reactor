@@ -74,6 +74,37 @@ class TestReplySelect(unittest.TestCase):
                               self.profile, self.settings)
         self.assertNotEqual(src, "popular_verbatim")
 
+    def test_question_comment_not_echoed(self):
+        # A specific question/reference about the video's content is
+        # commentary, not a generic reaction — must not be echoed verbatim
+        # even if short and popular.
+        comments = [Comment("Graduation??? Kanye reference?", likes=200)] + \
+                   [Comment("😂", likes=5)] * 20
+        _, src = select_reply(ctx(comments), Emotion.LAUGH,
+                              self.profile, self.settings)
+        self.assertNotEqual(src, "popular_verbatim")
+
+    def test_wordy_no_emoji_comment_not_echoed(self):
+        # Short and popular, but pure text with no emoji at all — still a
+        # specific worded take, not a generic reaction. Must fall through so
+        # a favourite emoji present in the crowd (😂) wins instead.
+        comments = [Comment("How many times bro", likes=90)] + \
+                   [Comment("😂", likes=5)] * 20
+        text, src = select_reply(ctx(comments), Emotion.LAUGH,
+                                 self.profile, self.settings)
+        self.assertNotEqual(src, "popular_verbatim")
+
+    def test_moderately_long_comment_not_echoed(self):
+        # Long enough to be a specific take (or spam), not a short generic
+        # reaction — must fall through even though it's well under the old
+        # 60-char limit.
+        comments = [Comment("your ankle will give you an unforgettable "
+                            "gift tomorrow 🔥", likes=80)] + \
+                   [Comment("🔥", likes=5)] * 20
+        _, src = select_reply(ctx(comments), Emotion.FIRE,
+                              self.profile, self.settings)
+        self.assertNotEqual(src, "popular_verbatim")
+
 
 if __name__ == "__main__":
     unittest.main()

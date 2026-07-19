@@ -24,6 +24,9 @@ class AppConfig:
     enabled_chats: list[str] = field(default_factory=list)
     # Android device serial (adb). Empty => first/only device.
     device_serial: str = ""
+    # ntfy.sh topic to push error/unsure notifications to from the web UI.
+    # Empty => notifications are skipped (printed to the server log instead).
+    ntfy_topic: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -31,6 +34,7 @@ class AppConfig:
             "settings": self.settings.to_dict(),
             "enabled_chats": self.enabled_chats,
             "device_serial": self.device_serial,
+            "ntfy_topic": self.ntfy_topic,
         }
 
     @classmethod
@@ -40,6 +44,7 @@ class AppConfig:
             settings=Settings.from_dict(d.get("settings", {})),
             enabled_chats=list(d.get("enabled_chats", [])),
             device_serial=d.get("device_serial", ""),
+            ntfy_topic=d.get("ntfy_topic", ""),
         )
 
 

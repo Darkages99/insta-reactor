@@ -45,12 +45,43 @@ def explain(decision: Decision) -> str:
     return "\n".join(lines)
 
 
-def summarize(summary: RunSummary, verbose: bool = False) -> str:
+def to_dict(summary: RunSummary, plan_only: bool = False) -> dict:
+    """Machine-readable run summary (for the phone app / --json output)."""
+    auto_replied = [
+        {
+            "chat": d.chat_name,
+            "reel_id": d.reel_id,
+            "reply": d.reply_text,
+            "emotion": d.winning_emotion,
+            "confidence": d.confidence,
+        }
+        for d in summary.auto_replied
+    ]
+    flagged = [
+        {
+            "chat": d.chat_name,
+            "reel_id": d.reel_id,
+            "kind": d.flag.kind if d.flag else None,
+            "label": FLAG_LABEL.get(d.flag.kind, d.flag.kind) if d.flag else None,
+            "reason": d.flag.reason if d.flag else "",
+        }
+        for d in summary.flagged
+    ]
+    return {
+        "plan_only": plan_only,
+        "counts": {"auto_replied": len(auto_replied), "flagged": len(flagged)},
+        "auto_replied": auto_replied,
+        "flagged": flagged,
+    }
+
+
+def summarize(summary: RunSummary, verbose: bool = False, plan_only: bool = False) -> str:
     lines: list[str] = []
     lines.append("=" * 56)
     lines.append("RUN SUMMARY")
     lines.append("=" * 56)
-    lines.append(f"  ✅ {len(summary.auto_replied)} reel(s) auto-replied")
+    verb = "would be auto-replied (nothing sent)" if plan_only else "auto-replied"
+    lines.append(f"  ✅ {len(summary.auto_replied)} reel(s) {verb}")
     counts = summary.counts_by_flag()
     total_flagged = len(summary.flagged)
     lines.append(f"  ⚠️  {total_flagged} reel(s) flagged for manual review")
@@ -59,7 +90,7 @@ def summarize(summary: RunSummary, verbose: bool = False) -> str:
     lines.append("")
 
     if summary.auto_replied:
-        lines.append("Auto-replied:")
+        lines.append("Would auto-reply (plan-only):" if plan_only else "Auto-replied:")
         for d in summary.auto_replied:
             emoji = CANON_EMOJI.get(d.winning_emotion or "", "")
             lines.append(f"  ✅ [{d.chat_name}] {d.reel_id}: {d.reply_text!r} "

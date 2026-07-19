@@ -32,7 +32,19 @@ def _most_popular_sendable(comments: list[Comment], settings: Settings) -> Comme
     likes = max(0, int(best.likes or 0))
     if likes <= 0:
         return None
-    if len(best.text.strip()) > settings.max_verbatim_len:
+    text = best.text.strip()
+    if len(text) > settings.max_verbatim_len:
+        return None
+    if "?" in text:
+        # A question is commentary about the video ("wait is that the..."),
+        # not a generic reaction — never safe to echo as if it's your own take.
+        return None
+    if not extract_emojis(text):
+        # Plain worded text ("How many times bro") reads as a specific,
+        # possibly out-of-character take even when short. Repeated/emphatic
+        # emoji reactions ("😢😢😢") are the safe generic case — require at
+        # least one emoji to qualify for a verbatim echo, else fall through
+        # to the favourite-emoji tier.
         return None
     by_floor = likes >= settings.popular_min_likes
     # Share path needs a small absolute floor so "1 of 1 like" can't qualify.
