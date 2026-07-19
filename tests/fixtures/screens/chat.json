@@ -1,0 +1,1698 @@
+[
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/action_bar_root",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "android:id/content",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_container_parent",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_container_main",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/thread_fragment_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/thread_background_view_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/thread_background_view",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2493
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_actions_fragment",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/direct_thread_header",
+  "bounds": [
+   0,
+   144,
+   1272,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Back",
+  "id": "com.instagram.android:id/header_left_button",
+  "bounds": [
+   0,
+   144,
+   158,
+   302
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/header_avatar",
+  "bounds": [
+   191,
+   172,
+   292,
+   273
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/header_avatar",
+  "bounds": [
+   202,
+   183,
+   281,
+   262
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/header_title_subtitle_container",
+  "bounds": [
+   325,
+   175,
+   946,
+   270
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Sarang D Rajgopaul",
+  "desc": "",
+  "id": "com.instagram.android:id/header_title",
+  "bounds": [
+   325,
+   175,
+   711,
+   225
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "Active now",
+  "id": "com.instagram.android:id/header_subtitle",
+  "bounds": [
+   325,
+   225,
+   946,
+   270
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/header_right_buttons",
+  "bounds": [
+   979,
+   144,
+   1249,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Audio call",
+  "id": "",
+  "bounds": [
+   979,
+   144,
+   1114,
+   302
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Video call",
+  "id": "",
+  "bounds": [
+   1114,
+   144,
+   1249,
+   302
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/direct_thread_content_below_action_bar",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/thread_toggle_child_fragment_container",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/thread_view_root",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_thread_container",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_list_refresh_container",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2545
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "androidx.recyclerview.widget.RecyclerView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_list",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2545
+  ],
+  "clickable": false,
+  "scrollable": true,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content",
+  "bounds": [
+   0,
+   302,
+   1272,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_linear_layout",
+  "bounds": [
+   0,
+   302,
+   1249,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_vertical_linear_layout",
+  "bounds": [
+   0,
+   302,
+   1249,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_placeholder_container",
+  "bounds": [
+   0,
+   302,
+   749,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_placeholder_container",
+  "bounds": [
+   158,
+   302,
+   749,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_portrait_xma_container",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reel_share_item_view",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_constraint_layout",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_container",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/image",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   302,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/direct_reel_share_legibility_gradient_footer",
+  "bounds": [
+   158,
+   534,
+   636,
+   613
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_icon",
+  "bounds": [
+   192,
+   511,
+   260,
+   579
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content",
+  "bounds": [
+   0,
+   617,
+   1272,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_linear_layout",
+  "bounds": [
+   0,
+   617,
+   1249,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_vertical_linear_layout",
+  "bounds": [
+   0,
+   617,
+   1249,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_placeholder_container",
+  "bounds": [
+   0,
+   617,
+   749,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_placeholder_container",
+  "bounds": [
+   158,
+   617,
+   749,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_portrait_xma_container",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reel_share_item_view",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_constraint_layout",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_container",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/image",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   617,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/legibility_gradient_header",
+  "bounds": [
+   158,
+   617,
+   636,
+   797
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/direct_reel_share_legibility_gradient_footer",
+  "bounds": [
+   158,
+   1398,
+   636,
+   1477
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/profile_attribution_container",
+  "bounds": [
+   192,
+   651,
+   602,
+   719
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Profile picture",
+  "id": "com.instagram.android:id/profile_attribution_picture",
+  "bounds": [
+   192,
+   651,
+   260,
+   719
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   283,
+   662,
+   574,
+   708
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "always_music_1",
+  "desc": "",
+  "id": "com.instagram.android:id/title_text",
+  "bounds": [
+   283,
+   662,
+   574,
+   708
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/center_icon",
+  "bounds": [
+   352,
+   1002,
+   442,
+   1092
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_icon",
+  "bounds": [
+   192,
+   1375,
+   260,
+   1443
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_shortcut_buttons_container",
+  "bounds": [
+   659,
+   945,
+   749,
+   1148
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Forward message",
+  "id": "com.instagram.android:id/forwarding_shortcut_button",
+  "bounds": [
+   659,
+   945,
+   749,
+   1035
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Riff cutout icon",
+  "id": "com.instagram.android:id/message_riff_cutout_shortcut_button",
+  "bounds": [
+   659,
+   1058,
+   749,
+   1148
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content",
+  "bounds": [
+   0,
+   1481,
+   1272,
+   2450
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_linear_layout",
+  "bounds": [
+   0,
+   1481,
+   1249,
+   2450
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_vertical_linear_layout",
+  "bounds": [
+   0,
+   1481,
+   1249,
+   2450
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_placeholder_container",
+  "bounds": [
+   0,
+   1481,
+   749,
+   2396
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_horizontal_placeholder_container",
+  "bounds": [
+   0,
+   1481,
+   749,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_shortcut_buttons_container",
+  "bounds": [
+   659,
+   1809,
+   749,
+   2012
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Forward message",
+  "id": "com.instagram.android:id/forwarding_shortcut_button",
+  "bounds": [
+   659,
+   1809,
+   749,
+   1899
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Riff cutout icon",
+  "id": "com.instagram.android:id/message_riff_cutout_shortcut_button",
+  "bounds": [
+   659,
+   1922,
+   749,
+   2012
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Profile picture",
+  "id": "com.instagram.android:id/sender_avatar",
+  "bounds": [
+   51,
+   2262,
+   130,
+   2341
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_content_portrait_xma_container",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reel_share_item_view",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_constraint_layout",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/media_container",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/image",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1481,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/legibility_gradient_header",
+  "bounds": [
+   158,
+   1481,
+   636,
+   1661
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/direct_reel_share_legibility_gradient_footer",
+  "bounds": [
+   158,
+   2262,
+   636,
+   2341
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/profile_attribution_container",
+  "bounds": [
+   192,
+   1515,
+   602,
+   1583
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Profile picture",
+  "id": "com.instagram.android:id/profile_attribution_picture",
+  "bounds": [
+   192,
+   1515,
+   260,
+   1583
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   283,
+   1526,
+   578,
+   1572
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "thestevenhe",
+  "desc": "",
+  "id": "com.instagram.android:id/title_text",
+  "bounds": [
+   283,
+   1526,
+   578,
+   1572
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/center_icon",
+  "bounds": [
+   352,
+   1866,
+   442,
+   1956
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_icon",
+  "bounds": [
+   192,
+   2239,
+   260,
+   2307
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_pills_container",
+  "bounds": [
+   158,
+   2341,
+   260,
+   2396
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_reactions_pill_container",
+  "bounds": [
+   180,
+   2341,
+   260,
+   2396
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "Tap to react with any emoji.",
+  "id": "com.instagram.android:id/reaction_add",
+  "bounds": [
+   197,
+   2341,
+   243,
+   2386
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reaction_add_icon",
+  "bounds": [
+   203,
+   2346,
+   237,
+   2380
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "Tap to react with any emoji",
+  "desc": "",
+  "id": "com.instagram.android:id/message_footer_label",
+  "bounds": [
+   158,
+   2396,
+   647,
+   2450
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/meta_ai_voice_container",
+  "bounds": [
+   0,
+   302,
+   1272,
+   2469
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_composer_bar",
+  "bounds": [
+   0,
+   2450,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/message_composer_reply_bar_container",
+  "bounds": [
+   0,
+   2450,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/row_thread_composer_container",
+  "bounds": [
+   0,
+   2450,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/blurred_text_area_background",
+  "bounds": [
+   23,
+   2473,
+   1249,
+   2614
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   23,
+   2473,
+   1249,
+   2614
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/row_thread_composer_textarea_container",
+  "bounds": [
+   23,
+   2473,
+   1249,
+   2614
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/row_thread_composer_shortcut_viewgroup",
+  "bounds": [
+   40,
+   2490,
+   147,
+   2597
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Camera",
+  "id": "com.instagram.android:id/row_thread_composer_button_camera",
+  "bounds": [
+   40,
+   2490,
+   147,
+   2597
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/composer_content_container",
+  "bounds": [
+   170,
+   2473,
+   773,
+   2614
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.EditText",
+  "text": "Message…",
+  "desc": "",
+  "id": "com.instagram.android:id/row_thread_composer_edittext",
+  "bounds": [
+   170,
+   2473,
+   773,
+   2614
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/row_thread_composer_buttons_container",
+  "bounds": [
+   773,
+   2473,
+   1229,
+   2597
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Voice message, press and hold to record",
+  "id": "com.instagram.android:id/row_thread_composer_voice",
+  "bounds": [
+   773,
+   2512,
+   887,
+   2580
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Gallery",
+  "id": "com.instagram.android:id/row_thread_composer_button_gallery",
+  "bounds": [
+   887,
+   2512,
+   1001,
+   2580
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Stickers",
+  "id": "com.instagram.android:id/row_thread_composer_button_sticker",
+  "bounds": [
+   1001,
+   2512,
+   1115,
+   2580
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "More",
+  "id": "com.instagram.android:id/row_thread_composer_button_overflow",
+  "bounds": [
+   1115,
+   2512,
+   1229,
+   2580
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ }
+]

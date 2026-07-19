@@ -1,0 +1,3362 @@
+[
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/action_bar_root",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "android:id/content",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_container_parent",
+  "bounds": [
+   0,
+   0,
+   1272,
+   2772
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_sheet_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_container_bottom_sheet",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_sheet_container",
+  "bounds": [
+   0,
+   1142,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_sheet_drag_handle_frame",
+  "bounds": [
+   0,
+   1142,
+   1272,
+   1216
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_sheet_drag_handle_prism",
+  "bounds": [
+   591,
+   1142,
+   681,
+   1216
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/bottom_sheet_container_view",
+  "bounds": [
+   0,
+   1216,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1216,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_meta_ai_scrollable_component",
+  "bounds": [
+   0,
+   1216,
+   1272,
+   1306
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.HorizontalScrollView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1216,
+   1272,
+   1306
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/prompt_container",
+  "bounds": [
+   0,
+   1216,
+   865,
+   1306
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/icon",
+  "bounds": [
+   56,
+   1239,
+   100,
+   1283
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "Search · F1 competition without regulations",
+  "desc": "",
+  "id": "com.instagram.android:id/prompt_text_view",
+  "bounds": [
+   123,
+   1239,
+   826,
+   1283
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/list_view_container",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/comment_overswipe_dismiss_container",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/main_list_view",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/recycler_view_container_id",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": false
+ },
+ {
+  "cls": "androidx.recyclerview.widget.RecyclerView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/sticky_header_list",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": true,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1306,
+   1272,
+   1307
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1307,
+   1272,
+   1519
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1307,
+   1272,
+   1519
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Go to enidmay_plays's profile",
+  "id": "",
+  "bounds": [
+   45,
+   1341,
+   146,
+   1442
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1307,
+   1114,
+   1519
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1330,
+   1114,
+   1434
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "enidmay_plays ",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   183,
+   1330,
+   429,
+   1374
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "6 July",
+  "desc": "6 July",
+  "id": "",
+  "bounds": [
+   432,
+   1330,
+   474,
+   1374
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "enidmay_plays said Wad da haiiiiillllll",
+  "desc": "enidmay_plays said Wad da haiiiiillllll",
+  "id": "",
+  "bounds": [
+   183,
+   1385,
+   471,
+   1434
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "Reply",
+  "desc": "Reply",
+  "id": "",
+  "bounds": [
+   183,
+   1434,
+   319,
+   1519
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "82 likes. Double tap to like comment and press and hold to see all likes",
+  "id": "",
+  "bounds": [
+   1114,
+   1307,
+   1272,
+   1476
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "",
+  "bounds": [
+   1114,
+   1307,
+   1272,
+   1431
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "82",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1173,
+   1431,
+   1213,
+   1471
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1519,
+   1272,
+   1731
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1519,
+   1272,
+   1731
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Go to oagarcia99's profile",
+  "id": "",
+  "bounds": [
+   45,
+   1553,
+   146,
+   1654
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1519,
+   1114,
+   1731
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1542,
+   1114,
+   1646
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "oagarcia99 ",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   183,
+   1542,
+   371,
+   1586
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "6 July",
+  "desc": "6 July",
+  "id": "",
+  "bounds": [
+   374,
+   1542,
+   416,
+   1586
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "oagarcia99 said The upside down one surely it’s a Ferrari",
+  "desc": "oagarcia99 said The upside down one surely it’s a Ferrari",
+  "id": "",
+  "bounds": [
+   183,
+   1597,
+   909,
+   1646
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "Reply",
+  "desc": "Reply",
+  "id": "",
+  "bounds": [
+   183,
+   1646,
+   319,
+   1731
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "6162 likes. Double tap to like comment and press and hold to see all likes",
+  "id": "",
+  "bounds": [
+   1114,
+   1519,
+   1272,
+   1688
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "",
+  "bounds": [
+   1114,
+   1519,
+   1272,
+   1643
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "6,162",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1152,
+   1643,
+   1233,
+   1683
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1731,
+   1272,
+   1792
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   152,
+   1752,
+   245,
+   1755
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "View 7 more replies",
+  "desc": "View 7 more replies",
+  "id": "",
+  "bounds": [
+   270,
+   1731,
+   587,
+   1775
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1792,
+   1272,
+   2050
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1792,
+   1272,
+   2050
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   34,
+   1815,
+   158,
+   1939
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "View thestevenhe's story",
+  "id": "",
+  "bounds": [
+   45,
+   1826,
+   146,
+   1927
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1792,
+   1114,
+   2050
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   1815,
+   1114,
+   1965
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "thestevenhe   ",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   183,
+   1815,
+   450,
+   1861
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "7 days ago",
+  "desc": "7 days ago",
+  "id": "",
+  "bounds": [
+   453,
+   1815,
+   492,
+   1861
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "•",
+  "desc": "•",
+  "id": "",
+  "bounds": [
+   503,
+   1815,
+   514,
+   1861
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "Author",
+  "desc": "Author",
+  "id": "",
+  "bounds": [
+   525,
+   1815,
+   637,
+   1861
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "thestevenhe said WOW didn’t expect yall to roast Ferrari in the comments ..",
+  "desc": "thestevenhe said WOW didn’t expect yall to roast Ferrari in the comments ..",
+  "id": "",
+  "bounds": [
+   183,
+   1872,
+   1114,
+   1965
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "Reply",
+  "desc": "Reply",
+  "id": "",
+  "bounds": [
+   183,
+   1965,
+   319,
+   2050
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "435 likes. Double tap to like comment and press and hold to see all likes",
+  "id": "",
+  "bounds": [
+   1114,
+   1792,
+   1272,
+   1961
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "",
+  "bounds": [
+   1114,
+   1792,
+   1272,
+   1916
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "435",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1162,
+   1916,
+   1224,
+   1956
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2050,
+   1272,
+   2111
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   152,
+   2071,
+   245,
+   2074
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "View 3 more replies",
+  "desc": "View 3 more replies",
+  "id": "",
+  "bounds": [
+   270,
+   2050,
+   588,
+   2094
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2111,
+   1272,
+   2323
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2111,
+   1272,
+   2323
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   34,
+   2134,
+   158,
+   2258
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "View reilly.denton's story",
+  "id": "",
+  "bounds": [
+   45,
+   2145,
+   146,
+   2246
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   2111,
+   1114,
+   2323
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   2134,
+   1114,
+   2238
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "reilly.denton ",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   183,
+   2134,
+   394,
+   2178
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "6 July",
+  "desc": "6 July",
+  "id": "",
+  "bounds": [
+   397,
+   2134,
+   439,
+   2178
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "reilly.denton said Ferrari design team best moments",
+  "desc": "reilly.denton said Ferrari design team best moments",
+  "id": "",
+  "bounds": [
+   183,
+   2189,
+   801,
+   2238
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "Reply",
+  "desc": "Reply",
+  "id": "",
+  "bounds": [
+   183,
+   2238,
+   319,
+   2323
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "13 likes. Double tap to like comment and press and hold to see all likes",
+  "id": "",
+  "bounds": [
+   1114,
+   2111,
+   1272,
+   2280
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "",
+  "bounds": [
+   1114,
+   2111,
+   1272,
+   2235
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "13",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1176,
+   2235,
+   1210,
+   2275
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2323,
+   1272,
+   2384
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   152,
+   2344,
+   245,
+   2347
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "View 2 more replies",
+  "desc": "View 2 more replies",
+  "id": "",
+  "bounds": [
+   270,
+   2323,
+   588,
+   2367
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2384,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2384,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   158,
+   2384,
+   1114,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "1 likes. Double tap to like comment and press and hold to see all likes",
+  "id": "",
+  "bounds": [
+   1114,
+   2384,
+   1272,
+   2389
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "",
+  "bounds": [
+   1114,
+   2384,
+   1272,
+   2389
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2389,
+   1272,
+   2390
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/above_composer_views",
+  "bounds": [
+   0,
+   2390,
+   1272,
+   2503
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2390,
+   1272,
+   2391
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   51,
+   2402,
+   152,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   51,
+   2402,
+   152,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   204,
+   2402,
+   305,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   204,
+   2402,
+   305,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/item_emoji_overlay",
+  "bounds": [
+   204,
+   2402,
+   305,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   356,
+   2402,
+   457,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   356,
+   2402,
+   457,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   509,
+   2402,
+   610,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   509,
+   2402,
+   610,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/item_emoji_overlay",
+  "bounds": [
+   509,
+   2402,
+   610,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   661,
+   2402,
+   762,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   661,
+   2402,
+   762,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   814,
+   2402,
+   915,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   814,
+   2402,
+   915,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   966,
+   2402,
+   1067,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   966,
+   2402,
+   1067,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1119,
+   2402,
+   1220,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   1119,
+   2402,
+   1220,
+   2503
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/comment_composer_parent_updated",
+  "bounds": [
+   0,
+   2525,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Profile picture",
+  "id": "com.instagram.android:id/comment_composer_left_image_view",
+  "bounds": [
+   34,
+   2525,
+   135,
+   2626
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/comment_composer_text_parent",
+  "bounds": [
+   158,
+   2525,
+   1120,
+   2626
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/edittext_container",
+  "bounds": [
+   158,
+   2525,
+   1007,
+   2626
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.AutoCompleteTextView",
+  "text": "Join the conversation…",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_comment_thread_edittext_multiline",
+  "bounds": [
+   158,
+   2525,
+   1007,
+   2626
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "Gif",
+  "id": "com.instagram.android:id/comment_composer_animated_image_picker_button",
+  "bounds": [
+   1007,
+   2542,
+   1120,
+   2610
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/comment_composer_appreciation_gift_button",
+  "bounds": [
+   1159,
+   2542,
+   1272,
+   2610
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/comments_composer_bottom_padding",
+  "bounds": [
+   0,
+   2626,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/layout_container_main",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/root_clips_layout",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_linear_layout_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/gesture_manager",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/emoji_reaction_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_swipe_refresh_container",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": false
+ },
+ {
+  "cls": "androidx.viewpager.widget.ViewPager",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_view_pager",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": true,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "androidx.recyclerview.widget.RecyclerView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": true,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "Reel by thestevenhe",
+  "id": "com.instagram.android:id/clips_media_component",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_single_media_component",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_video_layout",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "Reel by thestevenhe. Double tap to play or pause.",
+  "id": "com.instagram.android:id/clips_video_container",
+  "bounds": [
+   274,
+   144,
+   998,
+   1297
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.TextureView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   274,
+   144,
+   998,
+   1297
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_item_overlay_component",
+  "bounds": [
+   274,
+   144,
+   998,
+   1287
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   274,
+   144,
+   998,
+   1287
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   274,
+   144,
+   998,
+   1287
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   144,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_media_info_component",
+  "bounds": [
+   0,
+   2172,
+   1125,
+   2439
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2172,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2172,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   45,
+   2172,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   45,
+   2172,
+   1125,
+   2323
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_author_info_component",
+  "bounds": [
+   45,
+   2172,
+   501,
+   2323
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   45,
+   2200,
+   168,
+   2323
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Profile picture of thestevenhe",
+  "id": "com.instagram.android:id/clips_author_profile_pic",
+  "bounds": [
+   56,
+   2211,
+   157,
+   2312
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   168,
+   2237,
+   501,
+   2287
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "thestevenhe  ",
+  "desc": "thestevenhe  ",
+  "id": "com.instagram.android:id/clips_author_username",
+  "bounds": [
+   168,
+   2237,
+   501,
+   2287
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   501,
+   2202,
+   746,
+   2322
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "Follow",
+  "desc": "Follow Steven He",
+  "id": "com.instagram.android:id/inline_follow_button",
+  "bounds": [
+   518,
+   2225,
+   706,
+   2305
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_caption_component",
+  "bounds": [
+   45,
+   2323,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ScrollView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   45,
+   2323,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   45,
+   2334,
+   1125,
+   2400
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "If #f1 had no rules ..️ …",
+  "id": "",
+  "bounds": [
+   45,
+   2334,
+   1125,
+   2400
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_ufi_component",
+  "bounds": [
+   1125,
+   1208,
+   1272,
+   2439
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1125,
+   1208,
+   1249,
+   2394
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1125,
+   1208,
+   1249,
+   2394
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Like",
+  "id": "com.instagram.android:id/like_button",
+  "bounds": [
+   1125,
+   1208,
+   1249,
+   1332
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Like number is108601. View likes",
+  "desc": "Like number is108601. View likes",
+  "id": "com.instagram.android:id/like_count",
+  "bounds": [
+   1125,
+   1332,
+   1249,
+   1399
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Comment",
+  "id": "com.instagram.android:id/comment_button",
+  "bounds": [
+   1125,
+   1399,
+   1249,
+   1523
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Comment number is411. View comments",
+  "desc": "Comment number is411. View comments",
+  "id": "com.instagram.android:id/comment_count",
+  "bounds": [
+   1125,
+   1523,
+   1249,
+   1590
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Repost",
+  "id": "",
+  "bounds": [
+   1125,
+   1590,
+   1249,
+   1714
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Reposted 6271 times",
+  "desc": "Reposted 6271 times",
+  "id": "com.instagram.android:id/repost_count",
+  "bounds": [
+   1125,
+   1714,
+   1249,
+   1781
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Share",
+  "id": "com.instagram.android:id/direct_share_button",
+  "bounds": [
+   1125,
+   1781,
+   1249,
+   1905
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Reshare number is28939",
+  "desc": "Reshare number is28939",
+  "id": "com.instagram.android:id/ufi_text_component",
+  "bounds": [
+   1125,
+   1905,
+   1249,
+   1972
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Save",
+  "id": "com.instagram.android:id/save_button",
+  "bounds": [
+   1125,
+   1972,
+   1249,
+   2096
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "Save number is8341",
+  "desc": "Save number is8341",
+  "id": "com.instagram.android:id/save_count",
+  "bounds": [
+   1125,
+   2096,
+   1249,
+   2163
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "More",
+  "id": "com.instagram.android:id/clips_ufi_more_button_component",
+  "bounds": [
+   1125,
+   2163,
+   1249,
+   2287
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1145,
+   2310,
+   1229,
+   2394
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Audio",
+  "id": "com.instagram.android:id/media_album_art_button",
+  "bounds": [
+   1145,
+   2310,
+   1229,
+   2394
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2439,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/watch_and_comment_audio_toggle_component",
+  "bounds": [
+   1130,
+   1000,
+   1272,
+   1142
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1164,
+   1034,
+   1238,
+   1108
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1184,
+   1054,
+   1218,
+   1088
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_bottom_legibility_gradient_component",
+  "bounds": [
+   0,
+   1987,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   1987,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.ViewGroup",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2242,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   0,
+   2422,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.SeekBar",
+  "text": "16030.0",
+  "desc": "Seekbar",
+  "id": "com.instagram.android:id/scrubber",
+  "bounds": [
+   0,
+   2439,
+   1272,
+   2467
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.RelativeLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_action_bar",
+  "bounds": [
+   0,
+   144,
+   1272,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_action_bar_start_action_buttons",
+  "bounds": [
+   0,
+   144,
+   134,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Back",
+  "id": "",
+  "bounds": [
+   0,
+   156,
+   134,
+   290
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.RelativeLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   134,
+   144,
+   689,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/sender_profile_pic",
+  "bounds": [
+   134,
+   183,
+   239,
+   288
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/faceswarm_container",
+  "bounds": [
+   134,
+   183,
+   239,
+   288
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/faceswarm_item_1",
+  "bounds": [
+   134,
+   183,
+   239,
+   288
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "Sarang D Rajgopaul",
+  "desc": "",
+  "id": "com.instagram.android:id/sender_username_or_fullname",
+  "bounds": [
+   267,
+   178,
+   689,
+   236
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "49m ago",
+  "desc": "",
+  "id": "com.instagram.android:id/sender_timestamp",
+  "bounds": [
+   267,
+   236,
+   403,
+   279
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_action_bar_title_container",
+  "bounds": [
+   1070,
+   144,
+   1115,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.TextView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_viewer_action_bar_title",
+  "bounds": [
+   1070,
+   144,
+   1115,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_action_bar_end_action_buttons",
+  "bounds": [
+   1115,
+   144,
+   1249,
+   302
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Create a reel",
+  "id": "",
+  "bounds": [
+   1115,
+   156,
+   1249,
+   290
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_footer_mask_container",
+  "bounds": [
+   0,
+   2467,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reply_bar_container_and_title",
+  "bounds": [
+   0,
+   2467,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.HorizontalScrollView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reply_bar_container_scroll_view",
+  "bounds": [
+   0,
+   2467,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reply_bar_container",
+  "bounds": [
+   0,
+   2467,
+   1272,
+   2637
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.LinearLayout",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reel_viewer_message_composer",
+  "bounds": [
+   23,
+   2490,
+   1249,
+   2614
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.AutoCompleteTextView",
+  "text": "Reply to Sarang D Rajgopaul",
+  "desc": "",
+  "id": "com.instagram.android:id/reply_bar_edittext",
+  "bounds": [
+   85,
+   2490,
+   809,
+   2614
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": true,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   865,
+   2515,
+   938,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "❤",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   865,
+   2515,
+   938,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   961,
+   2515,
+   1034,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   961,
+   2515,
+   1034,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "",
+  "id": "",
+  "bounds": [
+   1057,
+   2515,
+   1130,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.Button",
+  "text": "",
+  "desc": "..",
+  "id": "com.instagram.android:id/item_emoji",
+  "bounds": [
+   1057,
+   2515,
+   1130,
+   2588
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.FrameLayout",
+  "text": "",
+  "desc": "Open emoji reaction sheet",
+  "id": "com.instagram.android:id/reply_bar_reaction_sheet_button",
+  "bounds": [
+   1153,
+   2518,
+   1221,
+   2586
+  ],
+  "clickable": true,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/reply_bar_emoji_button_inside_composer",
+  "bounds": [
+   1164,
+   2529,
+   1209,
+   2574
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.view.View",
+  "text": "",
+  "desc": "",
+  "id": "com.instagram.android:id/clips_expanded_touch_view",
+  "bounds": [
+   0,
+   2383,
+   1272,
+   2495
+  ],
+  "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ }
+]

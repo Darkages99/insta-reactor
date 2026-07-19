@@ -47,6 +47,19 @@ _UI_HINT_STRINGS = {
 
 _HANDLE_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._]{0,28}[a-z0-9])?$")
 
+# TextView resource-ids that render inside or beside a shared-reel bubble but are
+# NOT chat messages: the reel's own author-attribution label and the "tap to
+# react" footer hint. Confirmed against a real DM-thread capture
+# (data/calib_chat, P2): these carry stable IG-internal ids that a free-text DM
+# bubble does not, so filtering by id is a far more robust discriminator than the
+# text heuristic below (a bare lowercase handle like "thestevenhe" is otherwise
+# indistinguishable from a one-word message). Used by the preceding/following/
+# outgoing-reply scans so a reel author label never trips Rule 1/1b.
+_NON_MESSAGE_TEXT_IDS = frozenset({
+    "com.instagram.android:id/title_text",
+    "com.instagram.android:id/message_footer_label",
+})
+
 
 def _is_ui_chrome_or_label(txt: str) -> bool:
     """True if `txt` is Instagram UI chrome (a tap/hold hint) or an account
@@ -373,6 +386,8 @@ class AndroidBackend(Backend):
         w, _ = self.d.window_size()
         reel_bottom = node.bounds[3]
         for tv in self.d.find_all(className="android.widget.TextView"):
+            if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
+                continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
             if not txt:
                 continue
@@ -409,6 +424,8 @@ class AndroidBackend(Backend):
         best_text = None
         best_bottom = -1
         for tv in self.d.find_all(className="android.widget.TextView"):
+            if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
+                continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
             if not txt or _is_ui_chrome_or_label(txt):
                 continue
@@ -436,6 +453,8 @@ class AndroidBackend(Backend):
         best_text = None
         best_top = 10 ** 9
         for tv in self.d.find_all(className="android.widget.TextView"):
+            if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
+                continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
             if not txt or _is_ui_chrome_or_label(txt):
                 continue
