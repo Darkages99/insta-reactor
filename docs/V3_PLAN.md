@@ -1,6 +1,10 @@
 # INSTA REACTOR — V3 Plan (phone-only, PC-free, fully local)
 
-Status: **planning** · Branch: `v3` (off `master` @ V2) · Owner: Sarang
+Status: **planning — key decisions locked** · Branch: `v3` (off `master` @ V2) · Owner: Sarang
+
+**Locked (2026-07-19):** engine = **Option B** (reuse the Python engine via
+Chaquopy); distribution = **direct APK / sideload**. Full Kotlin rewrite is
+deferred to **V4**; Play Store is deferred to **V5**. See §8 and §10.
 
 V1 = throwaway. V2 = works but requires a PC (this document explains exactly
 why). V3 = the same behaviour as V2, running **entirely on the phone**, with
@@ -216,26 +220,35 @@ This is a fork worth an explicit sign-off before construction (see §8).
   run lifecycle. Local storage. Single installable APK.
 - **P4 — On-device model (optional brain upgrade).** Add a TFLite/ONNX `Model`
   behind `build_model`; keep rules authoritative. Ships after parity.
-- **P5 — Distribution.** Signing, versioning, update channel; Play Store vs.
-  direct-APK decision executed; onboarding that explains the one accessibility
-  grant honestly.
+- **P5 — Distribution (sideload).** Signing, versioning, and an update channel
+  (e.g. GitHub releases). Onboarding that honestly explains the "unknown
+  sources" install and the one accessibility grant. **No Play Store in V3** —
+  that's V5 (§10).
 
 Sequencing rule: **P0 before anything else.** If swipe-to-react or node reads
 don't behave under AccessibilityService, that changes the plan — find out first.
 
 ---
 
-## 8. Open decisions to confirm
+## 8. Decisions
 
-1. **Engine strategy (the pivotal fork):** Option **B (Chaquopy, reuse Python)**
-   vs **C (Kotlin rewrite)**. Recommendation: **B now, C later if needed.**
-2. **Distribution channel:** direct APK/sideload (lower policy risk, easier) vs.
-   Play Store (reach, but accessibility-automation scrutiny). Shapes P3/P5 and
-   the honesty of the permission ask.
-3. **Model runtime for P4:** TFLite vs ONNX Runtime Mobile vs MediaPipe — defer
-   until parity, but note the choice affects the classifier port.
-4. **Always dry-run first?** Keep "dry run" the default on-device until P2 sign-off
-   (matches the scaffold's current stance).
+**Locked:**
+1. **Engine strategy — Option B (Chaquopy, reuse the Python engine).** Ship the
+   proven brain unchanged inside a native shell now. A full Kotlin rewrite is
+   *not* abandoned — it is deliberately deferred to **V4** (§10), to be done
+   against a frozen, device-verified spec rather than a moving target.
+2. **Distribution — direct APK / sideload.** Host the APK (e.g. GitHub
+   releases); users enable "install from unknown sources" once and grant the
+   accessibility permission. Sidesteps Play Store's accessibility-automation
+   scrutiny while the app is proven with power users. Play Store is deferred to
+   **V5** (§10).
+
+**Still open (deferred, not blocking):**
+3. **Model runtime for P4:** TFLite vs ONNX Runtime Mobile vs MediaPipe — decide
+   at parity; the choice affects the classifier port. (torch won't run under
+   Chaquopy, so V3.0 ships rules-only.)
+4. **Always dry-run first?** Keep "dry run" the default on-device until P2
+   sign-off (matches the scaffold's current stance).
 
 ---
 
@@ -246,4 +259,35 @@ don't behave under AccessibilityService, that changes the plan — find out firs
 - No network egress containing comment text (verifiable by inspection).
 - Review queue, dedup, and run summary all function on-device.
 - Rules-only parity with V2 (model optional, arrives in P4).
+
+---
+
+## 10. Future versions (deferred on purpose)
+
+These are committed *directions*, not V3 scope. They exist so V3's choices stay
+honest bridges rather than dead ends.
+
+### V4 — Full Kotlin rewrite (Python-free binary)
+**Trigger:** V3's decision logic is device-verified and behaving perfectly, and
+the Chaquopy runtime's size/startup cost is worth removing.
+**What:** port the frozen, well-tested engine (scoring, classifier interface,
+reply-select, reaction rules — and the 61 tests as a Kotlin parity spec) from
+Python to Kotlin. `AccessibilityDevice` and the app shell from V3 carry over
+mostly unchanged; only the brain is re-implemented.
+**Why wait:** you translate a *frozen spec*, not a moving target — the risky
+re-implementation happens once, against behaviour you already trust. Smaller,
+faster APK; no embedded Python runtime.
+
+### V5 — Play Store distribution
+**Trigger:** V4 is a fully working native Kotlin app, stable with real users
+from the V3 sideload phase.
+**What:** submit to Google Play; execute the accessibility-automation policy
+justification; enable one-tap install + automatic updates for mass reach.
+**Why wait:** a native app with no Python runtime is the cleanest possible Play
+Store submission, and by then the V3→V4 sideload phase has proven the behaviour
+and surfaced whatever policy friction actually exists — so the store fight is
+fought from a position of a stable, real-user-validated product.
+
+**Version ladder at a glance:** V3 = Python-in-native-shell, sideload → V4 =
+full Kotlin, sideload → V5 = full Kotlin, Play Store.
 ```
