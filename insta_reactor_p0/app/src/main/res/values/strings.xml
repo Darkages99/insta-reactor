@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InstaReactor P0</string>
+    <string name="a11y_description">P0 spike: reads Instagram\'s on-screen node tree and dispatches scripted taps/swipes to validate the V3 no-PC device layer. Instagram only; does nothing on other apps.</string>
+</resources>
