@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The floating control bar drawn on top of Instagram. Compact and draggable
+     (by the ⠿ handle) so it never has to cover the reel. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="#CC000000"
+    android:padding="4dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/ovHandle"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:text="⠿"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:paddingStart="6dp"
+        android:paddingEnd="10dp"
+        android:gravity="center" />
+
+    <Button
+        android:id="@+id/ovDump"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="0dp"
+        android:text="Dump" />
+
+    <Button
+        android:id="@+id/ovDoubleTap"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="0dp"
+        android:layout_marginStart="4dp"
+        android:text="2×Tap" />
+
+    <Button
+        android:id="@+id/ovSwipe"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="0dp"
+        android:layout_marginStart="4dp"
+        android:text="Swipe" />
+
+</LinearLayout>

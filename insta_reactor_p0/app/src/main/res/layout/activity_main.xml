@@ -16,7 +16,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="P0 spike — read IG's node tree + fire gestures, no PC."
+        android:text="P0 spike — read IG's node tree + fire gestures, no PC. Controls float over Instagram."
         android:textSize="12sp"
         android:layout_marginBottom="12dp" />
 
@@ -26,43 +26,27 @@
         android:layout_height="wrap_content"
         android:text="Enable service (Accessibility settings)" />
 
+    <Button
+        android:id="@+id/overlayButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Show floating controls" />
+
     <TextView
         android:id="@+id/statusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Service: OFF"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
         android:textStyle="italic" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/refreshButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/dumpButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Dump tree" />
-
-        <Button
-            android:id="@+id/doubleTapButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="Double-tap" />
-
-        <Button
-            android:id="@+id/swipeUpButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="Swipe up" />
-    </LinearLayout>
+        android:layout_marginTop="12dp"
+        android:text="Reload latest dump" />
 
     <ScrollView
         android:layout_width="match_parent"

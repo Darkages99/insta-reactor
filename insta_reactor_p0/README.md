@@ -32,20 +32,32 @@ self-sufficient and needs no PC).
 
 ## Use (on the phone, no PC)
 
+The controls live in a **floating bar that sits on top of Instagram** — you
+can't tap buttons inside this app *and* have IG in the foreground at the same
+time (whichever app you're touching is the "active window" the service reads).
+The overlay solves that: it floats over IG without stealing focus, so IG stays
+the window we read and act on.
+
 1. Open **InstaReactor P0**.
 2. Tap **Enable service** → turn on **InstaReactor P0** under Accessibility →
-   back out. Status should read **CONNECTED ✓**.
+   back out. Status should read **CONNECTED ✓** and a small black **floating
+   bar** appears (drag it by the `⠿` handle so it never covers the reel).
 3. Open **Instagram**, go into a **DM that has a reel**, and put the reel on
-   screen.
-4. Switch back to InstaReactor P0 (recents) and:
-   - **Dump tree** — prints every node of IG's current screen and saves a copy to
-     `Android/data/com.instareactor.p0/files/iurtree-<timestamp>.txt`.
-   - **Double-tap** — fires a double-tap at ~centre (IG's "like" gesture).
-   - **Swipe up** — fires a vertical swipe (reel scroll / reaction reveal).
+   screen. The floating bar stays visible on top.
+4. Use the floating bar (IG stays in front the whole time):
+   - **Dump** — reads IG's current node tree, saves it to
+     `Android/data/com.instareactor.p0/files/iurtree-<timestamp>.txt`, and
+     toasts the node count. Re-open this app → **Reload latest dump** to read it.
+   - **2×Tap** — double-tap at ~centre (IG's "like" gesture).
+   - **Swipe** — a vertical swipe (reel scroll / reaction reveal).
 
 > Gestures fire at generic screen fractions in P0. Getting the exact
 > swipe-to-react choreography right is P2 — here we only prove the gesture
-> *dispatch* lands as a real touch.
+> *dispatch* lands as a real touch, and that we can read IG's tree while IG is
+> in front.
+
+If the floating bar doesn't appear, toggle it with **Show floating controls**
+in the app.
 
 ## What to report back (P0 exit criteria)
 

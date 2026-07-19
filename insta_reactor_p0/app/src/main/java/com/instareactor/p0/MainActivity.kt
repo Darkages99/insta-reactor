@@ -3,18 +3,19 @@ package com.instareactor.p0
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.instareactor.p0.databinding.ActivityMainBinding
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
- * P0 control panel. No PC anywhere: you enable the accessibility service once,
- * open a reel in an Instagram DM, then use these buttons to (a) read IG's live
- * node tree and (b) fire scripted gestures at it.
+ * P0 launcher / reader.
+ *
+ * The actual testing is driven from the floating overlay (which sits on top of
+ * Instagram — see the service). This screen just:
+ *   - shortcuts you into Accessibility settings to enable the service,
+ *   - toggles the floating control bar,
+ *   - and shows the most recent node dump the overlay saved, so you can read
+ *     the tree without a PC.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -28,73 +29,49 @@ class MainActivity : AppCompatActivity() {
         binding.enableButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        binding.dumpButton.setOnClickListener { onDump() }
-        binding.doubleTapButton.setOnClickListener { onDoubleTap() }
-        binding.swipeUpButton.setOnClickListener { onSwipeUp() }
+        binding.overlayButton.setOnClickListener { toggleOverlay() }
+        binding.refreshButton.setOnClickListener { loadLatestDump() }
     }
 
     override fun onResume() {
         super.onResume()
         refreshStatus()
+        loadLatestDump()
     }
 
     private fun service(): ReactorAccessibilityService? = ReactorAccessibilityService.instance
 
     private fun refreshStatus() {
-        val on = service() != null
-        binding.statusText.text = if (on) {
-            "Service: CONNECTED ✓  — open a reel in an IG DM, then Dump / react."
-        } else {
-            "Service: OFF — tap \"Enable service\", turn on \"InstaReactor P0\", " +
-                "then come back."
+        val svc = service()
+        binding.statusText.text = when {
+            svc == null ->
+                "Service: OFF — tap \"Enable service\", turn on \"InstaReactor P0\", come back."
+            svc.overlayShown() ->
+                "Service: CONNECTED ✓ — floating bar is up. Open a reel in an IG DM " +
+                    "and use the bar's Dump / 2×Tap / Swipe."
+            else ->
+                "Service: CONNECTED ✓ — floating bar hidden. Tap \"Show floating controls\"."
         }
-        binding.dumpButton.isEnabled = on
-        binding.doubleTapButton.isEnabled = on
-        binding.swipeUpButton.isEnabled = on
+        binding.overlayButton.isEnabled = svc != null
+        binding.overlayButton.text =
+            if (svc?.overlayShown() == true) "Hide floating controls" else "Show floating controls"
     }
 
-    private fun onDump() {
+    private fun toggleOverlay() {
         val svc = service() ?: return
-        val dump = svc.dumpTree()
-        binding.outputText.text = dump
-
-        // Persist it too, so a tree captured mid-scroll can be studied later —
-        // still no PC needed; the file lives in the app's own storage.
-        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-        val file = File(getExternalFilesDir(null), "iurtree-$stamp.txt")
-        runCatching { file.writeText(dump) }
-            .onSuccess { toast("Saved: ${file.name}") }
-            .onFailure { toast("Dump shown (save failed: ${it.message})") }
+        if (svc.overlayShown()) svc.hideOverlay() else svc.showOverlay()
+        refreshStatus()
     }
 
-    private fun onDoubleTap() {
-        val svc = service() ?: return
-        val (w, h) = svc.screenSize()
-        val cx = w / 2f
-        val cy = h * 0.45f  // upper-middle: where a reel bubble usually sits
-        binding.statusText.text = "Double-tapping ($cx, $cy)…"
-        svc.doubleTap(cx, cy) { ok ->
-            runOnUiThread {
-                binding.statusText.text =
-                    if (ok) "Double-tap dispatched ✓ (did IG register a like?)"
-                    else "Double-tap FAILED — gesture was cancelled/refused."
-            }
+    /** Loads the newest iurtree-*.txt the overlay wrote, so you can read it here. */
+    private fun loadLatestDump() {
+        val dir = getExternalFilesDir(null)
+        val latest = dir?.listFiles { f -> f.name.startsWith("iurtree-") }
+            ?.maxByOrNull { it.lastModified() }
+        binding.outputText.text = when {
+            latest == null -> "No dump yet. Use the floating bar's \"Dump\" over an IG reel."
+            else -> "── ${latest.name} ──\n\n" + runCatching { latest.readText() }
+                .getOrElse { "(couldn't read: ${it.message})" }
         }
     }
-
-    private fun onSwipeUp() {
-        val svc = service() ?: return
-        val (w, h) = svc.screenSize()
-        val x = w / 2f
-        binding.statusText.text = "Swiping up…"
-        svc.swipe(x, h * 0.70f, x, h * 0.30f, durationMs = 250) { ok ->
-            runOnUiThread {
-                binding.statusText.text =
-                    if (ok) "Swipe-up dispatched ✓ (did the reel move?)"
-                    else "Swipe FAILED — gesture was cancelled/refused."
-            }
-        }
-    }
-
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 }
