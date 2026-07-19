@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">INSTA REACTOR</string>
+    <string name="a11y_description">Reads Instagram\'s on-screen content and taps/swipes on your behalf to react to reels friends send you in DMs. Runs only when you press Run, only on Instagram, and keeps everything on this phone — nothing is uploaded.</string>
+</resources>

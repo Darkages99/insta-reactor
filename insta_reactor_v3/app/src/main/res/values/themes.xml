@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose supplies the real theming (MaterialTheme). This framework theme
+         just gives the host Activity a no-action-bar window with no extra
+         view-system dependency. -->
+    <style name="Theme.InstaReactorV3" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>
