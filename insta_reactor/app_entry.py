@@ -38,6 +38,12 @@ from .models import Decision, RunSummary
 
 log = logging.getLogger("insta_reactor.app_entry")
 
+# No PC / no CLI means no one ever calls logging.basicConfig() on this process
+# — without a handler, the package's log.info(...) calls (reel sweep progress,
+# nav state, etc.) are silently dropped before Chaquopy's stdout redirect ever
+# sees them. Configure once at import time so `adb logcat` shows them.
+logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s: %(message)s")
+
 
 # --- storage layout ----------------------------------------------------------
 # One directory (the app's files dir on Android) holds everything. Mirrors the

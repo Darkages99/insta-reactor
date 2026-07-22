@@ -88,8 +88,13 @@ class ReactorAccessibilityService : AccessibilityService() {
      * Blank strings are "" (never null). Returns "[]" when nothing is readable.
      */
     fun nodesJson(): String {
+        val root = rootInActiveWindow
+        android.util.Log.i("ReactorA11yDebug",
+            "nodesJson: root=${root != null} pkg=${root?.packageName} " +
+            "childCount=${root?.childCount} class=${root?.className}")
         val arr = JSONArray()
-        appendNodeJson(rootInActiveWindow, arr)
+        appendNodeJson(root, arr)
+        android.util.Log.i("ReactorA11yDebug", "nodesJson: emitted ${arr.length()} nodes")
         return arr.toString()
     }
 

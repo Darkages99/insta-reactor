@@ -56,6 +56,11 @@ class Navigator:
             return State.CHAT
         if self._exists_any(S.STATE_FINGERPRINTS["INBOX"]):
             return State.INBOX
+        nodes = self.d.find_all()
+        ids = sorted({n.resource_id for n in nodes if n.resource_id})
+        texts = [n.text for n in nodes if n.text][:15]
+        log.info("detect_state: UNKNOWN — %d nodes, resource-ids=%s texts=%s",
+                 len(nodes), ids, texts)
         return State.UNKNOWN
 
     def wait_for_state(self, target: State, timeout: float = 6.0) -> bool:

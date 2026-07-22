@@ -18,3 +18,11 @@ templates/*.png
 # IDE
 .idea/
 
+# Android/Gradle
+.gradle/
+local.properties
+*.iml
+/captures
+.externalNativeBuild/
+.cxx/
+

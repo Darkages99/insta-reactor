@@ -264,13 +264,28 @@ class AndroidBackend(Backend):
         """Scroll from the bottom and return the (k)-th incoming reel counting
         from the newest (0-based), or None if there are fewer than k+1 reels."""
         if not self._anchor_chat_bottom():
+            log.info("_locate_nth_reel_from_bottom: _anchor_chat_bottom failed")
             return None
         w, h = self.d.window_size()
         zt, zb = int(h * _ZONE_TOP), int(h * _ZONE_BOTTOM)
+        all_nodes = self.d.find_all()
+        all_reels = [n for n in all_nodes
+                     if n.resource_id == "com.instagram.android:id/reel_share_item_view"]
+        ids_seen = sorted({n.resource_id for n in all_nodes if n.resource_id})
+        log.info("_locate_nth_reel_from_bottom: window=%dx%d zone=(%d,%d) "
+                  "total_nodes=%d reel nodes=%d %s",
+                  w, h, zt, zb, len(all_nodes), len(all_reels),
+                  [(n.bounds, n.center) for n in all_reels])
+        log.info("resource-ids seen (%d): %s", len(ids_seen), ids_seen)
 
         skipped = 0
-        for _ in range(_MAX_SWEEP_STEPS):
+        for step in range(_MAX_SWEEP_STEPS):
+            raw = self.d.find_all(
+                resource_id="com.instagram.android:id/reel_share_item_view")
             reels = self._loosely_visible_reels(zt, zb)
+            log.info("sweep step %d: raw_reel_nodes=%d %s loosely_visible=%d skipped=%d",
+                      step, len(raw), [(n.bounds, n.center) for n in raw],
+                      len(reels), skipped)
             if reels:
                 newest = reels[-1]          # largest y => closest to bottom
                 if skipped == k:
@@ -282,10 +297,21 @@ class AndroidBackend(Backend):
                 skipped += 1
                 continue
             # nothing visible in the band — reveal older messages above.
-            if not self.nav.thread_scroll_up():
+            # A half-screen stride (the thread_scroll_up default) is wider than
+            # the zone-minus-tallest-reel margin, so a reel bubble can be
+            # scrolled clean from "not yet rendered" to "already past" between
+            # two consecutive checks without ever being attached/queryable in
+            # between (RecyclerView only attaches items landing in the final
+            # post-scroll range). A narrower stride keeps consecutive zone
+            # checks overlapping enough that no reel-sized bubble slips through.
+            progressed = self.nav.thread_scroll_up(amount=0.3)
+            log.info("sweep step %d: nothing visible, thread_scroll_up()=%s", step, progressed)
+            if not progressed:
                 # at the very top: count any remaining fully-visible reels,
                 # newest (bottom-most) first.
-                for n in reversed(self._fully_visible_reels(zt, zb)):
+                fv = self._fully_visible_reels(zt, zb)
+                log.info("sweep step %d: reached top, fully_visible=%d", step, len(fv))
+                for n in reversed(fv):
                     if skipped == k:
                         return n
                     skipped += 1
