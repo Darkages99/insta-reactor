@@ -35,7 +35,10 @@ def _parse_like_count(text: str) -> int:
     if not text:
         return 0
     t = text.lower().replace(",", "").strip()
-    m = re.search(r"([\d.]+)\s*([km]?)", t)
+    # require at least one digit — a bare "." (e.g. a stray separator
+    # character in some other row's text) matched `[\d.]+` on its own and
+    # crashed `float()`, confirmed on-device.
+    m = re.search(r"(\d+(?:\.\d+)?)\s*([km]?)", t)
     if not m:
         return 0
     num = float(m.group(1))

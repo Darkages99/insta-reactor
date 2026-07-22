@@ -126,6 +126,14 @@ class Settings:
     max_verbatim_len: int = 24        # never echo a comment longer than this
     prefer_favourite_emoji: bool = True  # bias reply toward your favourites seen in comments
 
+    # --- personal echo bypass ------------------------------------------------
+    # If your own preferred emoji/common-reply literally shows up this many
+    # times (or more) among the comments — regardless of whether the wider
+    # crowd agrees with each other — that's strong enough direct evidence on
+    # its own to skip the crowd-consensus gate (min_top_share/min_margin).
+    # The confidence gate still applies as a floor.
+    personal_echo_min_matches: int = 2
+
     def to_dict(self) -> dict:
         return asdict(self)
 

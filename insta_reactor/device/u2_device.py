@@ -41,8 +41,16 @@ class U2Device(Device):
 
     # ---- observation ----------------------------------------------------
     def current_package(self) -> str:
+        # NOTE: `d.app_current()` (dumpsys-activity-based) was confirmed
+        # on-device to both take ~10s per call AND misreport the foreground
+        # package (returned a stale/backgrounded "com.android.chrome" while
+        # Instagram was genuinely focused). That made detect_state() think
+        # Instagram was never open, so ensure_app_open()/ensure_inbox() spun
+        # uselessly. `d.info["currentPackageName"]` reads the same live
+        # accessibility-focus signal `dumpsys window | mCurrentFocus` does —
+        # confirmed correct and ~100x faster (<0.1s).
         try:
-            return self.d.app_current().get("package", "")
+            return self.d.info.get("currentPackageName", "")
         except Exception:
             return ""
 

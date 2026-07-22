@@ -16,11 +16,19 @@ Pure/deterministic so it is fully unit-tested without a device.
 
 from __future__ import annotations
 
+import re
+
 from ..models import Profile, Settings, Comment, ReplyStyle
 from .comment_filter import reactable
 from .normalize import extract_emojis, strip_variation
 from .slang_map import EMOJI_EMOTION
 from . import scoring
+
+
+# A comment that @-mentions or tags another account, or links out. Echoing it
+# verbatim would tag a stranger into your DM (or forward a link) as if it were
+# your own reaction — never safe, however popular the comment is.
+_MENTION_OR_LINK = re.compile(r"(^|\s)@[\w.]+|https?://|www\.", re.IGNORECASE)
 
 
 def _most_popular_sendable(comments: list[Comment], settings: Settings) -> Comment | None:
@@ -38,6 +46,10 @@ def _most_popular_sendable(comments: list[Comment], settings: Settings) -> Comme
     if "?" in text:
         # A question is commentary about the video ("wait is that the..."),
         # not a generic reaction — never safe to echo as if it's your own take.
+        return None
+    if _MENTION_OR_LINK.search(text):
+        # Echoing a comment that tags another account (or links out) would
+        # @-mention a stranger into your DM as if you wrote it — never safe.
         return None
     if not extract_emojis(text):
         # Plain worded text ("How many times bro") reads as a specific,

@@ -123,6 +123,50 @@ def personal_scores(profile: Profile) -> dict[str, float]:
 
 
 # --------------------------------------------------------------------------
+# personal echo (literal matches of your own style in the actual comments)
+# --------------------------------------------------------------------------
+
+def personal_echo_counts(comments: list[Comment], profile: Profile) -> dict[str, int]:
+    """How many *distinct* comments literally contain one of your own
+    preferred emojis or common replies, per emotion.
+
+    Unlike `public_scores` (weighted, dictionary-wide) and `personal_scores`
+    (your stated preferences alone, no comment text involved), this counts
+    raw occurrences of *your own specific style* inside the crowd's actual
+    comments — direct evidence you'd react the same way, independent of
+    whether the wider crowd agrees with itself.
+    """
+    pref_emojis: dict[str, str] = {}  # literal emoji -> emotion
+    for emoji in profile.emoji_prefs:
+        for e in extract_emojis(emoji):
+            pref_emojis[e] = EMOJI_EMOTION.get(e, e)
+
+    pref_replies = [r.strip().lower() for r in profile.common_replies if r.strip()]
+
+    counts: Counter = Counter()
+    for c in comments:
+        text = (c.text or "").strip()
+        if not text:
+            continue
+        low = text.lower()
+        matched_emotion = None
+        for e, emotion in pref_emojis.items():
+            if e in text:
+                matched_emotion = emotion
+                break
+        if matched_emotion is None:
+            for reply in pref_replies:
+                if reply and reply in low:
+                    sig = signals_for_comment(reply, profile.extra_slang)
+                    if sig:
+                        matched_emotion = max(sig.items(), key=lambda kv: kv[1])[0]
+                        break
+        if matched_emotion:
+            counts[matched_emotion] += 1
+    return dict(counts)
+
+
+# --------------------------------------------------------------------------
 # combine + confidence
 # --------------------------------------------------------------------------
 

@@ -50,11 +50,23 @@ class TestRules(unittest.TestCase):
         self.assertEqual(d.flag.kind, FlagKind.TOO_FEW_COMMENTS)
 
     def test_no_consensus_split(self):
-        comments = ([Comment("💀")] * 5 + [Comment("😭")] * 5 +
-                    [Comment("😂")] * 5 + [Comment("🔥")] * 5)
+        # None of these emojis are in the test profile's preferences, so the
+        # personal-echo bypass can't kick in — this isolates the pure
+        # crowd-consensus gate.
+        comments = ([Comment("😱")] * 5 + [Comment("😤")] * 5 +
+                    [Comment("🔥")] * 5 + [Comment("❤️")] * 5)
         d = decide_reaction(make(comments), self.p, self.s)
         self.assertEqual(d.action, Action.FLAG)
         self.assertEqual(d.flag.kind, FlagKind.NO_CONSENSUS)
+
+    def test_personal_echo_bypasses_no_consensus(self):
+        # Crowd is evenly split (no real consensus) but your own preferred
+        # emoji (😂, in the test profile) literally shows up several times —
+        # that's enough to skip the consensus gate on its own.
+        comments = ([Comment("💀")] * 5 + [Comment("😭")] * 5 +
+                    [Comment("😂")] * 5 + [Comment("🔥")] * 5)
+        d = decide_reaction(make(comments), self.p, self.s)
+        self.assertNotEqual(d.flag.kind if d.flag else None, FlagKind.NO_CONSENSUS)
 
     def test_no_recognizable_reactions(self):
         comments = [Comment("first"), Comment("nice video")] * 15

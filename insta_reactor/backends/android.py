@@ -406,16 +406,59 @@ class AndroidBackend(Backend):
             return ReelContext(chat_name=self._chat, reel_id=reel_id,
                                read_error=True)
 
+    def _attribution_labels(self) -> set[str]:
+        """Text of every reel-attribution label currently on screen, queried
+        directly by resource-id (not via the generic TextView sweep).
+
+        Belt-and-suspenders for the `_NON_MESSAGE_TEXT_IDS` filter below:
+        confirmed on-device that a plain TextView scan can occasionally read
+        an attribution label's `resourceName` back empty (a transient
+        uiautomator2/accessibility read, not a real absence of the id) —
+        which let a reel author's handle (e.g. "yasirmemebaaz") slip through
+        as if it were a real chat message and wrongly trip Rule 1/1b. Querying
+        by resource-id directly is a separate lookup less prone to that same
+        flake, so cross-checking text against this set catches it either way.
+        """
+        return {
+            n.text.strip()
+            for n in self.d.find_all(
+                resource_id="com.instagram.android:id/title_text")
+            if n.text and n.text.strip()
+        }
+
     def _has_outgoing_reply_after(self, node: UiNode) -> bool:
-        """True if an outgoing (right-aligned) message sits just below this reel
-        — i.e. you've already replied to it. Best-effort revisit guard."""
+        """True if an outgoing (right-aligned) reply sits just below this reel
+        — i.e. you've already replied to it. Revisit guard.
+
+        Two shapes of "already replied" are detected:
+          * an outgoing text/emoji message bubble, and
+          * an outgoing reel-*quote* bubble — replying to a reel via
+            swipe-to-reply posts your reaction as a bubble that re-embeds the
+            reel (its own `reel_share_item_view`, right-aligned). Confirmed
+            on-device (live run): these quote bubbles are exactly how our
+            reactions render, and the earlier text-only check missed them
+            (the emoji text sits well below the re-embedded reel thumbnail,
+            past the gap window), which let a re-run re-react to reels it had
+            already answered.
+        """
         w, _ = self.d.window_size()
         reel_bottom = node.bounds[3]
+
+        # (a) an outgoing reel-quote reply bubble just below this reel.
+        for rn in self.d.find_all(
+                resource_id="com.instagram.android:id/reel_share_item_view"):
+            l, t, r, b = rn.bounds
+            cx = (l + r) // 2
+            if cx > w / 2 and 0 <= (t - reel_bottom) < 320:  # right-aligned, just below
+                return True
+
+        # (b) an outgoing text/emoji reply just below this reel.
+        attribution = self._attribution_labels()
         for tv in self.d.find_all(className="android.widget.TextView"):
             if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
                 continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
-            if not txt:
+            if not txt or txt in attribution:
                 continue
             l, t, r, b = tv.bounds
             cx = (l + r) // 2
@@ -447,13 +490,14 @@ class AndroidBackend(Backend):
         """
         width, _ = self.d.window_size()
         reel_top = node.bounds[1]
+        attribution = self._attribution_labels()
         best_text = None
         best_bottom = -1
         for tv in self.d.find_all(className="android.widget.TextView"):
             if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
                 continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
-            if not txt or _is_ui_chrome_or_label(txt):
+            if not txt or txt in attribution or _is_ui_chrome_or_label(txt):
                 continue
             l, t, r, b = tv.bounds
             cx = (l + r) // 2
@@ -476,13 +520,14 @@ class AndroidBackend(Backend):
         """
         width, _ = self.d.window_size()
         reel_bottom = node.bounds[3]
+        attribution = self._attribution_labels()
         best_text = None
         best_top = 10 ** 9
         for tv in self.d.find_all(className="android.widget.TextView"):
             if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
                 continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
-            if not txt or _is_ui_chrome_or_label(txt):
+            if not txt or txt in attribution or _is_ui_chrome_or_label(txt):
                 continue
             l, t, r, b = tv.bounds
             cx = (l + r) // 2

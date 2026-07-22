@@ -83,10 +83,14 @@ class TestRunnerEndToEnd(unittest.TestCase):
         self.assertEqual(summary.auto_replied[0].reply_text, "LMAOO 💀💀")
         self.assertEqual(summary.auto_replied[0].reply_source, "popular_verbatim")
 
+        # r5 ("Sarah") is an even 4-way split, but the profile's own preferred
+        # emojis (💀/😭/😂) are literally echoed 5x each in those comments, so
+        # the personal-echo bypass skips the no-consensus gate — it now falls
+        # through to (and fails) the confidence gate instead.
         kinds = {d.flag.kind for d in summary.flagged}
         self.assertEqual(kinds, {
             FlagKind.CONTEXT_TEXT, FlagKind.TOO_FEW_COMMENTS,
-            FlagKind.UNABLE_TO_READ, FlagKind.NO_CONSENSUS,
+            FlagKind.UNABLE_TO_READ, FlagKind.LOW_CONFIDENCE,
         })
         # exactly one reply was actually "sent"
         self.assertEqual(len(backend.sent), 1)

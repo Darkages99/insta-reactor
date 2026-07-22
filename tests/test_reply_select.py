@@ -84,6 +84,17 @@ class TestReplySelect(unittest.TestCase):
                               self.profile, self.settings)
         self.assertNotEqual(src, "popular_verbatim")
 
+    def test_mention_comment_not_echoed(self):
+        # Short, popular, has an emoji — but tags another account. Echoing it
+        # verbatim would @-mention a stranger into the DM; must fall through to
+        # a clean favourite emoji instead.
+        comments = [Comment("@nazarethshimei 🙌", likes=300)] + \
+                   [Comment("😂", likes=5)] * 20
+        text, src = select_reply(ctx(comments), Emotion.LAUGH,
+                                 self.profile, self.settings)
+        self.assertNotEqual(src, "popular_verbatim")
+        self.assertNotIn("@", text)
+
     def test_wordy_no_emoji_comment_not_echoed(self):
         # Short and popular, but pure text with no emoji at all — still a
         # specific worded take, not a generic reaction. Must fall through so

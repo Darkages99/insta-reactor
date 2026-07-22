@@ -98,6 +98,13 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings,
 
     confidence = scoring.confidence_score(top_share, margin, n, settings)
 
+    # --- Personal echo: your own emoji/common replies literally show up ----
+    # enough times in these comments on their own, regardless of whether the
+    # wider crowd agrees with itself.
+    echo_counts = scoring.personal_echo_counts(ctx.comments, profile)
+    echo_hits = echo_counts.get(winner, 0)
+    personal_echo = echo_hits >= settings.personal_echo_min_matches
+
     breakdown = ScoreBreakdown(
         public_raw={k: round(v, 4) for k, v in public_raw.items()},
         public_norm={k: round(v, 4) for k, v in public_norm.items()},
@@ -111,7 +118,9 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings,
     )
 
     # --- Consensus gate: is the crowd clear enough? -----------------------
-    if top_share < settings.min_top_share or margin < settings.min_margin:
+    # Skipped when your own style is directly echoed often enough in the
+    # comments — that's stronger evidence than crowd agreement.
+    if not personal_echo and (top_share < settings.min_top_share or margin < settings.min_margin):
         return _flag(
             ctx, FlagKind.NO_CONSENSUS,
             f"No clear reaction consensus (top share {top_share:.0%}, "

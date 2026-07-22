@@ -1010,7 +1010,7 @@
  {
   "cls": "android.widget.Button",
   "text": "",
-  "desc": "Sarang D Rajgopaul, unread, 4 new messages ·, 11m",
+  "desc": "Sarang D Rajgopaul, unread, 4 new messages \u00b7, 11m",
   "id": "com.instagram.android:id/row_inbox_container",
   "bounds": [
    0,
@@ -1105,7 +1105,7 @@
  },
  {
   "cls": "android.widget.TextView",
-  "text": "‎4 new messages ·",
+  "text": "\u200e4 new messages \u00b7",
   "desc": "",
   "id": "com.instagram.android:id/row_inbox_digest",
   "bounds": [
@@ -1121,7 +1121,7 @@
  },
  {
   "cls": "android.widget.TextView",
-  "text": "‎11m",
+  "text": "\u200e11m",
   "desc": "11m",
   "id": "com.instagram.android:id/row_inbox_timestamp",
   "bounds": [
@@ -2715,6 +2715,22 @@
    2637
   ],
   "clickable": false,
+  "scrollable": false,
+  "longClickable": false,
+  "enabled": true
+ },
+ {
+  "cls": "android.widget.ImageView",
+  "text": "",
+  "desc": "Camera",
+  "id": "",
+  "bounds": [
+   20,
+   60,
+   120,
+   160
+  ],
+  "clickable": true,
   "scrollable": false,
   "longClickable": false,
   "enabled": true

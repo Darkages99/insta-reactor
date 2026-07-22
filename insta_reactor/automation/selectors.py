@@ -34,7 +34,6 @@ STATE_FINGERPRINTS = {
     "CHAT": [
         {"resource_id": "com.instagram.android:id/row_thread_composer_edittext"},
         {"resource_id": "com.instagram.android:id/message_thread_container"},
-        {"desc": "Camera"},                  # in-thread camera button
         # NOTE: {"desc": "Message"} was removed — that content-desc actually
         # belongs to the bottom-nav Direct/Inbox tab icon (see
         # INBOX_TAB_BUTTON below), which is visible on Home/Inbox too, not
@@ -42,13 +41,23 @@ STATE_FINGERPRINTS = {
         # screen with the tab bar visible to be misdetected as CHAT, which
         # pre-empted the INBOX check (checked later) and made the inbox
         # unreachable.
+        # NOTE: {"desc": "Camera"} was removed for the same reason — the
+        # inbox list's own top bar has a "Direct camera" icon with the same
+        # content-desc, confirmed on-device (P2 live run). It matched before
+        # the INBOX check ever ran, so ensure_inbox() could never detect the
+        # inbox and looped until NavigationError. The resource-id matchers
+        # above are specific enough on their own.
     ],
     "REEL_VIEWER": [
         {"resource_id": "com.instagram.android:id/like_button"},
         {"resource_id": "com.instagram.android:id/comment_button"},
-        {"desc": "Like"},
-        {"desc": "Comment"},
-        {"desc": "Share"},
+        # NOTE: bare {"desc": "Like"/"Comment"/"Share"} fallbacks were removed —
+        # confirmed on-device (P2 live run) that the home feed's own post like
+        # button (resource-id row_feed_button_like, NOT like_button) also
+        # carries desc "Like". That false-matched REEL_VIEWER before the INBOX
+        # check ever ran, trapping ensure_inbox() in a misdetected state with
+        # no path back. The resource-id matchers above are reel-viewer-specific
+        # (confirmed against the clips_viewer fixture) and sufficient alone.
     ],
     "COMMENTS": [
         {"resource_id": "com.instagram.android:id/comment_overswipe_dismiss_container"},
@@ -168,4 +177,10 @@ DISMISS_INTERRUPTION = [
     {"text": "Dismiss"},
     {"text": "Later"},
     {"textContains": "Not now"},
+    # IG's own "You've reached your daily limit" well-being nag (confirmed
+    # on-device, P2 live run) — blocks the whole app behind a full-screen
+    # interstitial until dismissed. "Ignore limit for today" is its only
+    # non-destructive dismiss action (the other buttons snooze, they don't
+    # close it, so a retry loop would just hit the same screen again).
+    {"text": "Ignore limit for today"},
 ]

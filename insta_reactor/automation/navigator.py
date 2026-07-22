@@ -45,22 +45,35 @@ class Navigator:
     def detect_state(self) -> State:
         if self.d.current_package() != INSTAGRAM_PACKAGE:
             return State.NOT_INSTAGRAM
-        if self._exists_any(S.DISMISS_INTERRUPTION):
+        hit = self._find_any(S.DISMISS_INTERRUPTION)
+        if hit:
+            log.info("detect_state: INTERRUPTION — matched text=%r desc=%r id=%r",
+                      hit.text, hit.desc, hit.resource_id)
             return State.INTERRUPTION
         # Order matters: comments sheet sits on top of the reel viewer.
-        if self._exists_any(S.STATE_FINGERPRINTS["COMMENTS"]):
+        hit = self._find_any(S.STATE_FINGERPRINTS["COMMENTS"])
+        if hit:
+            log.info("detect_state: COMMENTS — matched text=%r desc=%r id=%r",
+                      hit.text, hit.desc, hit.resource_id)
             return State.COMMENTS
-        if self._exists_any(S.STATE_FINGERPRINTS["REEL_VIEWER"]):
+        hit = self._find_any(S.STATE_FINGERPRINTS["REEL_VIEWER"])
+        if hit:
+            log.info("detect_state: REEL_VIEWER — matched text=%r desc=%r id=%r",
+                      hit.text, hit.desc, hit.resource_id)
             return State.REEL_VIEWER
-        if self._exists_any(S.STATE_FINGERPRINTS["CHAT"]):
+        hit = self._find_any(S.STATE_FINGERPRINTS["CHAT"])
+        if hit:
+            log.info("detect_state: CHAT — matched text=%r desc=%r id=%r",
+                      hit.text, hit.desc, hit.resource_id)
             return State.CHAT
         if self._exists_any(S.STATE_FINGERPRINTS["INBOX"]):
             return State.INBOX
         nodes = self.d.find_all()
         ids = sorted({n.resource_id for n in nodes if n.resource_id})
         texts = [n.text for n in nodes if n.text][:15]
-        log.info("detect_state: UNKNOWN — %d nodes, resource-ids=%s texts=%s",
-                 len(nodes), ids, texts)
+        descs = [n.desc for n in nodes if n.desc][:15]
+        log.info("detect_state: UNKNOWN — %d nodes, resource-ids=%s texts=%s descs=%s",
+                 len(nodes), ids, texts, descs)
         return State.UNKNOWN
 
     def wait_for_state(self, target: State, timeout: float = 6.0) -> bool:
