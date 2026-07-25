@@ -130,7 +130,14 @@ class AndroidBackend(Backend):
         (which replies from the viewer, tagging the reel) or discard_reel.
         """
         max_new = getattr(self.config.settings, "max_new_reels", 3)
-        limit = min(max_new, _MAX_REELS)
+        # Run-start position watermark: process only the reels newer than our
+        # most recent pre-existing outgoing message (the ones that arrived since
+        # we last replied). This is what makes idempotency and re-send handling
+        # both work — see _new_reel_budget. Capped by max_new_reels and _MAX_REELS.
+        budget = self._new_reel_budget()
+        limit = min(budget, max_new, _MAX_REELS)
+        log.info("iter_reels: new-reel budget=%d (cap max_new=%d) => processing %d",
+                 budget, max_new, limit)
         k = 0
         while k < limit:
             node = self._locate_nth_reel_from_bottom(k)
@@ -138,14 +145,16 @@ class AndroidBackend(Backend):
                 log.info("no new reel #%d from bottom — handled %d new reel(s)",
                          k, k)
                 return
-            # Revisit guard: if your reply already sits right below this reel,
-            # it's handled — skip it and walk to older, still-unanswered reels
-            # instead of re-opening and re-reacting. (Cross-run dedup by comment
-            # signature is a second safety net in the runner.)
-            if self._has_outgoing_reply_after(node):
-                log.info("new reel #%d already answered — skipping", k)
-                k += 1
-                continue
+            # NOTE: we deliberately do NOT skip here based on an on-screen
+            # "already replied" check. That check (a reply bubble just below the
+            # reel) is fundamentally unreliable: our own replies are always the
+            # NEWEST messages in the thread, so they render directly beneath the
+            # newest *incoming* reel — even though that reply belongs to an older
+            # reel we quoted. Proximity can't tell which reel a quote answers, so
+            # the guard false-positived on exactly the newest, still-unanswered
+            # reel and skipped it every run (confirmed live). Dedup is instead
+            # the runner's job via the cross-run comment signature (SeenStore),
+            # which is content-based and reliable. We just read every reel here.
             reel_id = f"newreel#{k}"
             log.info("located new reel #%d from bottom (top=%d), reading…",
                      k, node.bounds[1])
@@ -174,11 +183,21 @@ class AndroidBackend(Backend):
         return self._read_reel(node, reel.reel_id)
 
     def send_reply(self, reel: ReelHandle, text: str) -> bool:
-        """React to the reel by swiping right on its bubble in the thread.
+        """React to the reel by re-opening it and replying from the reel viewer.
 
-        After `_read_reel` we're back in the thread with the reel bubble at its
-        original position (opening a reel preserves scroll). Swiping right on it
-        quotes the reel in the composer, so the reply is attached to *this* reel.
+        We deliberately do NOT use thread swipe-to-reply here: that gesture is
+        timing-sensitive and, when it fails to arm the "replying to" quote chip,
+        the old code fell through to the plain thread composer and sent a
+        *floating* message with no reel attached (confirmed on a live run — a
+        bare 😂 landed unquoted). Instead we tap the reel bubble to open the
+        reel viewer and type into its own reply bar ("Reply to <name>"), which
+        Instagram always attaches to *this* reel. If we can't open the viewer or
+        find its reply bar, we return False so the runner flags it — we never
+        fall back to an unattached send.
+
+        Opening a reel preserves the thread's scroll position, so the original
+        `node` bounds stay valid; we still relocate to fresh on-screen bounds
+        first in case navigation shifted things.
         """
         node = reel.locator if isinstance(reel.locator, UiNode) else None
         if node is None:
@@ -186,7 +205,15 @@ class AndroidBackend(Backend):
         if self.nav.detect_state() != State.CHAT and not self.nav.back_to_chat():
             return False
         target = self._relocate_reel_node(node) or node
-        return self.nav.react_to_reel(target, text)
+        self.d.tap_node(target)
+        if not self.nav.wait_for_state(State.REEL_VIEWER):
+            # couldn't open the reel — get back to a known state and bail.
+            self.nav.back_to_chat()
+            return False
+        ok = self.nav.reply_in_reel_viewer(text)
+        # comments/viewer -> thread, whatever happened, so the sweep can go on.
+        self.nav.back_to_chat()
+        return ok
 
     def discard_reel(self, reel: ReelHandle) -> None:
         """Return to the thread so the sweep can continue. `_read_reel` already
@@ -426,47 +453,102 @@ class AndroidBackend(Backend):
             if n.text and n.text.strip()
         }
 
-    def _has_outgoing_reply_after(self, node: UiNode) -> bool:
-        """True if an outgoing (right-aligned) reply sits just below this reel
-        — i.e. you've already replied to it. Revisit guard.
+    # NOTE: the former on-screen "already replied" guard (_has_outgoing_reply_after)
+    # was removed. It looked for an outgoing reply bubble just below a *specific*
+    # reel and used PROXIMITY to decide that reel was answered — unreliable,
+    # because our replies are always the newest messages, so they sit directly
+    # beneath the newest *incoming* reel while actually belonging to an older reel
+    # we quoted. Proximity can't attribute a quote to a specific reel.
+    #
+    # The watermark below is different and robust: it does NOT attribute a reply
+    # to a reel. It only finds the single thread-ORDER boundary — our most recent
+    # outgoing message — and treats reels newer than it as unreacted. That answers
+    # "have we replied since this reel arrived?" purely by order, which survives
+    # re-sends (a re-shared reel is a NEW bubble newer than our last reply, so it
+    # gets reacted even though we reacted to an identical reel before). See the
+    # resend-reels-should-react requirement.
 
-        Two shapes of "already replied" are detected:
-          * an outgoing text/emoji message bubble, and
-          * an outgoing reel-*quote* bubble — replying to a reel via
-            swipe-to-reply posts your reaction as a bubble that re-embeds the
-            reel (its own `reel_share_item_view`, right-aligned). Confirmed
-            on-device (live run): these quote bubbles are exactly how our
-            reactions render, and the earlier text-only check missed them
-            (the emoji text sits well below the re-embedded reel thumbnail,
-            past the gap window), which let a re-run re-react to reels it had
-            already answered.
+    def _newest_outgoing_top(self, zt: int, zb: int, w: int) -> int | None:
+        """Top-y of the BOTTOM-MOST outgoing (right-aligned) message currently in
+        the tappable band, or None if none is visible. Outgoing = our own
+        messages: right-aligned reel-quote bubbles (our reactions) and
+        right-aligned text/emoji. This is the run-start watermark's anchor; it is
+        used only to locate the thread-order boundary between reels we've already
+        replied to and newer ones — never to attribute a reply to a specific reel.
         """
-        w, _ = self.d.window_size()
-        reel_bottom = node.bounds[3]
-
-        # (a) an outgoing reel-quote reply bubble just below this reel.
+        tops: list[int] = []
         for rn in self.d.find_all(
                 resource_id="com.instagram.android:id/reel_share_item_view"):
             l, t, r, b = rn.bounds
             cx = (l + r) // 2
-            if cx > w / 2 and 0 <= (t - reel_bottom) < 320:  # right-aligned, just below
-                return True
-
-        # (b) an outgoing text/emoji reply just below this reel.
+            if cx > w / 2 and t >= zt and b <= zb:   # right-aligned => outgoing
+                tops.append(t)
         attribution = self._attribution_labels()
         for tv in self.d.find_all(className="android.widget.TextView"):
             if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
                 continue  # reel author label / react-hint footer, not a message
             txt = (tv.text or "").strip()
-            if not txt or txt in attribution:
+            if not txt or txt in attribution or _is_ui_chrome_or_label(txt):
                 continue
             l, t, r, b = tv.bounds
             cx = (l + r) // 2
-            outgoing = cx > w / 2          # your messages are right-aligned
-            gap = t - reel_bottom
-            if outgoing and 0 <= gap < 240:
-                return True
-        return False
+            if cx > w / 2 and t >= zt and b <= zb:   # right-aligned => outgoing
+                tops.append(t)
+        return max(tops) if tops else None
+
+    def _new_reel_budget(self) -> int:
+        """How many reels at the bottom of the thread are NEWER than our most
+        recent PRE-EXISTING outgoing message — i.e. reels that arrived since we
+        last replied and so still need a reaction.
+
+        Computed once at run start, BEFORE we post any reply, so our own new
+        replies never move the watermark (which would strand older-but-still-new
+        reels: after reacting to the newest reel, our reply becomes the newest
+        message, making every remaining unreacted reel look "already replied to").
+
+        A re-sent reel counts, because its new bubble is newer than our last reply
+        even if we reacted to an identical reel before (resend-reels-should-react).
+        Idempotency holds too: on a re-run with no new reels, our last reply is
+        the newest message and nothing is below it, so the count is 0.
+
+        If we have never replied in this thread there is no watermark, so every
+        incoming reel is new. The count is capped by max_new_reels.
+        """
+        if not self._anchor_chat_bottom():
+            return 0
+        w, h = self.d.window_size()
+        zt, zb = int(h * _ZONE_TOP), int(h * _ZONE_BOTTOM)
+        cap = min(getattr(self.config.settings, "max_new_reels", 3), _MAX_REELS)
+        count = 0
+        for step in range(_MAX_SWEEP_STEPS):
+            reels = self._loosely_visible_reels(zt, zb)     # incoming, y-asc
+            wm_top = self._newest_outgoing_top(zt, zb, w)   # bottom-most outgoing
+            if not reels:
+                if wm_top is not None:
+                    log.info("_new_reel_budget: watermark reached, no reels "
+                             "below it; count=%d", count)
+                    return min(count, cap)
+                if not self.nav.thread_scroll_up(amount=0.3):
+                    log.info("_new_reel_budget: reached thread top; count=%d",
+                             count)
+                    return min(count, cap)
+                continue
+            bottom_reel = reels[-1]         # largest y => closest to bottom
+            if wm_top is not None and wm_top > bottom_reel.bounds[1]:
+                # our most recent outgoing message sits BELOW the bottom-most
+                # visible reel => that reel (and everything older above it)
+                # predates our last reply and is already handled. Stop.
+                log.info("_new_reel_budget: watermark(top=%d) is below bottom "
+                         "reel(top=%d) => stop; count=%d",
+                         wm_top, bottom_reel.bounds[1], count)
+                return min(count, cap)
+            count += 1
+            log.info("_new_reel_budget: counted new reel #%d (top=%d, wm_top=%s)",
+                     count - 1, bottom_reel.bounds[1], wm_top)
+            if count >= cap:
+                return cap
+            self.nav.scroll_node_below_fold(bottom_reel.bounds[3], zb)
+        return min(count, cap)
 
     def _relocate_reel_node(self, node: UiNode) -> UiNode | None:
         """Find the on-screen reel bubble closest to `node` (fresh bounds after

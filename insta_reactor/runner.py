@@ -82,12 +82,22 @@ class Runner:
         for reel, ctx in self.backend.iter_reels():
             seen += 1
 
-            # Cross-run dedup: if we've reacted to this exact reel before
-            # (identified by its comment signature), don't touch it again.
+            # Dedup policy (see resend-reels-should-react memory):
+            #   * REACTED reels are NOT remembered by content. The backend's
+            #     run-start position watermark (iter_reels) already guarantees a
+            #     reel we've replied to won't be re-yielded, while a genuine
+            #     RE-SEND — a new bubble of the same content, newer than our last
+            #     reply — IS yielded and must get a fresh reaction (people
+            #     re-share the same reel repeatedly). Skipping by content here
+            #     would wrongly drop those re-sends.
+            #   * FLAGGED reels ARE remembered by content, because flagging posts
+            #     no outgoing message, so the watermark never advances past them
+            #     and iter_reels keeps re-yielding them. Without this we'd
+            #     re-flag the same unactionable reel every run.
             sig = signature(chat_name, ctx.comments)
             if self.seen.is_reacted(sig):
-                log.info("skipping already-reacted reel %s in %r",
-                         reel.reel_id, chat_name)
+                log.info("previously-flagged reel %s in %r — not re-flagging, "
+                         "continuing the sweep", reel.reel_id, chat_name)
                 self.backend.discard_reel(reel)
                 continue
 
@@ -100,11 +110,12 @@ class Runner:
             decision.reel_id = decision.reel_id or reel.reel_id
 
             replied = False
+            send_failed = False
             if decision.action == Action.AUTO_REPLY and self.send:
                 if self.backend.send_reply(reel, decision.reply_text or ""):
                     replied = True
-                    self.seen.mark(sig)   # remember so we never re-react
                 else:
+                    send_failed = True
                     decision = Decision(
                         action=Action.FLAG,
                         flag=Flag(FlagKind.NAV_FAILED,
@@ -121,6 +132,18 @@ class Runner:
 
             if decision.action != Action.AUTO_REPLY:
                 self.flags.enqueue(decision)
+
+            # Remember ONLY reels we FLAGGED (not ones we reacted to), so we
+            # don't re-flag the same unactionable reel every run while STILL
+            # re-reacting to genuine re-sends of reels we've reacted to before.
+            # Deliberately NOT recorded: reacted reels (the watermark handles
+            # those; content-memory would block re-sends), transient send
+            # failures (retry next run), and anything in plan-only (must stay
+            # side-effect-free). sig=None reels are never remembered — mark() and
+            # is_reacted() no-op on None.
+            flagged = decision.action != Action.AUTO_REPLY
+            if self.send and not send_failed and flagged:
+                self.seen.mark(sig)
             summary.add(decision)
 
         log.info("chat %r: processed %d reel(s)", chat_name, seen)

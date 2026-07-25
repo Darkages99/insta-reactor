@@ -111,6 +111,85 @@ class TestRunnerEndToEnd(unittest.TestCase):
         self.assertEqual(len(summary2.auto_replied), 0)
         self.assertEqual(len(backend.sent), 1)  # still just the one
 
+    def test_seen_reel_in_middle_does_not_stop_sweep(self):
+        """A previously-FLAGGED reel (in the seen store) can sit BETWEEN
+        genuinely-new reels. Skipping it must NOT abandon the newer reels below
+        it — the sweep continues. Regression for the over-eager `break`.
+        (Note: the store now remembers only flagged reels, not reacted ones — a
+        reacted reel that is re-sent must react again, see the resend test.)"""
+        from insta_reactor.seen_store import signature
+        from insta_reactor.models import Comment
+
+        def laugh_reel(rid, tag):  # strong 💀-consensus -> auto-reply
+            return {
+                "id": rid, "comment_count": 240,
+                "comments": ([{"text": f"LMAOO 💀💀 {tag}", "likes": 90}] * 3
+                             + [{"text": f"im deceased 💀 {tag}", "likes": 40}] * 10
+                             + [{"text": f"😭 {tag}", "likes": 5}] * 5
+                             + [{"text": f"🔥 {tag}", "likes": 1}] * 3),
+            }
+
+        reel_b = laugh_reel("B", "bbb")
+        fixture = {"chats": {"Feed": {"reels": [
+            laugh_reel("A", "aaa"), reel_b, laugh_reel("C", "ccc"),
+        ]}}}
+        cfg = AppConfig(
+            profile=Profile(emoji_prefs=["💀", "😭", "😂"],
+                            common_replies=["bro 💀", "💀"],
+                            reply_style=ReplyStyle.SINGLE),
+            settings=Settings(), enabled_chats=["Feed"],
+        )
+
+        # Pre-seed the seen store with the MIDDLE reel's signature.
+        b_ctx = [Comment(text=c["text"], likes=c["likes"]) for c in reel_b["comments"]]
+        sig_b = signature("Feed", b_ctx)
+        self.assertIsNotNone(sig_b)  # guard: the reel must actually be signable
+        pre = SeenStore(self.seen)
+        pre.mark(sig_b)
+        pre.save()
+
+        backend = SimulatedBackend(fixture)
+        summary = self._runner(backend, cfg).run()
+
+        replied_ids = {d.reel_id for d in summary.auto_replied}
+        # A and C both reacted; B skipped as already-seen — sweep never stopped.
+        self.assertEqual(replied_ids, {"A", "C"})
+        self.assertEqual({s[1] for s in backend.sent}, {"A", "C"})
+
+    def test_reacted_reels_not_remembered_flagged_reels_are(self):
+        """Dedup-policy regression (resend-reels-should-react):
+        a reel we REACTED to must NOT be written to the SeenStore — otherwise a
+        legitimate re-send of the same reel would be wrongly skipped. A reel we
+        FLAGGED (and could sign) MUST be written, so we don't re-flag the same
+        unactionable reel every run."""
+        from insta_reactor.seen_store import signature
+        from insta_reactor.models import Comment
+
+        backend = SimulatedBackend(build_fixture())
+        cfg = config()
+        self._runner(backend, cfg).run()
+
+        store = SeenStore(self.seen)   # reload what the run persisted
+
+        def sig_for(chat, reel_id):
+            reel = next(r for r in build_fixture()["chats"][chat]["reels"]
+                        if r["id"] == reel_id)
+            comments = [Comment(text=c.get("text", ""), likes=int(c.get("likes", 0)))
+                        for c in (reel.get("comments") or [])]
+            return signature(chat, comments)
+
+        # r1 was auto-replied -> must NOT be remembered (so re-sends still react).
+        r1_sig = sig_for("Best Friend", "r1")
+        self.assertIsNotNone(r1_sig)
+        self.assertFalse(store.is_reacted(r1_sig),
+                         "reacted reel r1 should not be in the seen store")
+
+        # r5 was flagged (no consensus) and is signable -> must be remembered.
+        r5_sig = sig_for("Sarah", "r5")
+        self.assertIsNotNone(r5_sig)
+        self.assertTrue(store.is_reacted(r5_sig),
+                        "flagged reel r5 should be remembered to avoid re-flagging")
+
 
 if __name__ == "__main__":
     unittest.main()
