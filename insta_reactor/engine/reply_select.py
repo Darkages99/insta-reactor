@@ -16,6 +16,7 @@ Pure/deterministic so it is fully unit-tested without a device.
 
 from __future__ import annotations
 
+import hashlib
 import re
 
 from ..models import Profile, Settings, Comment, ReplyStyle
@@ -124,3 +125,99 @@ def select_reply(
 
     # 3) emotion fallback (original behaviour)
     return scoring.build_reply(winner, profile), "emotion"
+
+
+# ---------------------------------------------------------------------------
+# Reply variety
+# ---------------------------------------------------------------------------
+# Reactions that are pure emoji get stylistically varied so we don't send the
+# exact same thing to every reel (which reads as a bot). We vary the COUNT
+# (1..MAX) and, when the crowd is leaning on an emoji that isn't in your
+# favourites, blend it with your favourite. We never send the same reply 3+
+# times in a row. popular_verbatim is left untouched — it's a real crowd comment
+# we echo as-is, not something to restyle.
+
+# sources whose (emoji) reply we may restyle
+_DIVERSIFY_SOURCES = {"favourite_match", "emotion"}
+MAX_EMOJI_REPEAT = 5   # user wants the emoji count to vary between 1 and 5
+
+
+def _is_pure_emoji(text: str) -> bool:
+    """True if `text` is only emoji (and whitespace) — no letters/digits. Keeps
+    us from mangling text replies like 'bro 💀'."""
+    return bool(text) and bool(extract_emojis(text)) and not any(
+        ch.isalnum() for ch in text)
+
+
+def _emoji_counts(comments: list[Comment]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for c in comments:
+        for e in extract_emojis(c.text):
+            b = strip_variation(e)
+            counts[b] = counts.get(b, 0) + 1
+    return counts
+
+
+def _mix_emoji(comments: list[Comment], profile: Profile, primary: str) -> str | None:
+    """The most common comment emoji that is NOT one of your favourites and
+    differs from `primary` — the 'other' emoji to blend in (per the user's
+    request to mix a list-emoji with a common non-list one). Must actually be
+    common (appears >= 2x) so we don't blend in a one-off."""
+    fav_bases = {strip_variation(extract_emojis(f)[0])
+                 for f in profile.emoji_prefs if extract_emojis(f)}
+    p = strip_variation(primary)
+    for emoji, n in sorted(_emoji_counts(comments).items(),
+                           key=lambda kv: (-kv[1], kv[0])):
+        if emoji != p and emoji not in fav_bases and n >= 2:
+            return emoji
+    return None
+
+
+def _variety_seed(comments: list[Comment]) -> int:
+    joined = "".join(sorted({c.text.strip() for c in comments}))[:200]
+    return int(hashlib.sha1(joined.encode("utf-8")).hexdigest(), 16)
+
+
+def diversify_reply(reply_text: str, reply_source: str,
+                    comments: list[Comment], profile: Profile,
+                    settings: Settings, recent: list[str]) -> str:
+    """Give a pure-emoji reply natural variety.
+
+    - varies the emoji count between 1 and MAX_EMOJI_REPEAT,
+    - blends in a common non-favourite comment emoji when one exists,
+    - never produces a reply identical to the previous *two* in `recent`
+      (so at most 2 identical replies in a row).
+
+    Deterministic given its inputs (the length/mix choice is seeded from the
+    comment set), so it's fully unit-testable; `recent` is the list of replies
+    already sent this run, supplied by the runner. Non-emoji or verbatim replies
+    (e.g. an echoed popular comment, or 'bro 💀') pass through unchanged.
+    """
+    if reply_source not in _DIVERSIFY_SOURCES or not _is_pure_emoji(reply_text):
+        return reply_text
+    primary = extract_emojis(reply_text)[0]
+    comments = reactable(comments)
+    mix = _mix_emoji(comments, profile, primary)
+    seed = _variety_seed(comments)
+
+    def build(length: int, use_mix: bool) -> str:
+        length = max(1, min(MAX_EMOJI_REPEAT, length))
+        if use_mix and mix:
+            return (primary * (length - 1) + mix) if length >= 2 else primary + mix
+        return primary * length
+
+    length = 1 + (seed % MAX_EMOJI_REPEAT)                        # 1..MAX
+    use_mix = mix is not None and (seed // MAX_EMOJI_REPEAT) % 3 != 0  # ~2/3 when available
+    reply = build(length, use_mix)
+
+    # enforce "no more than 2 identical in a row": if this would be the third
+    # identical reply, cycle the length (and flip the mix each full cycle) until
+    # it differs. The MAX distinct lengths guarantee we find a different reply.
+    for _ in range(2 * MAX_EMOJI_REPEAT):
+        if not (len(recent) >= 2 and recent[-1] == reply and recent[-2] == reply):
+            break
+        length = 1 + (length % MAX_EMOJI_REPEAT)
+        if length == 1 and mix:
+            use_mix = not use_mix
+        reply = build(length, use_mix)
+    return reply

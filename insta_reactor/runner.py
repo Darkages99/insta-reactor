@@ -13,6 +13,7 @@ import logging
 from .backends.base import Backend
 from .config import AppConfig
 from .engine.reaction import decide_reaction
+from .engine.reply_select import diversify_reply
 from .engine.classifier import build_model
 from .flags import FlagManager
 from .seen_store import SeenStore, signature
@@ -37,6 +38,9 @@ class Runner:
         self.seen = seen_store if seen_store is not None else SeenStore()
         # Offline emotion model (None unless enabled+installed => rules only).
         self.model = build_model(config.settings)
+        # Replies actually chosen this run, in order — lets diversify_reply keep
+        # us from sending the same emoji reaction 3+ times in a row.
+        self._recent_replies: list[str] = []
 
     def run(self) -> RunSummary:
         summary = RunSummary()
@@ -108,6 +112,18 @@ class Runner:
             # chat, and some flag paths leave reel_id blank).
             decision.chat_name = decision.chat_name or chat_name
             decision.reel_id = decision.reel_id or reel.reel_id
+
+            # Reply variety: vary the emoji count / blend in a common non-favourite
+            # emoji, and never send the same reaction 3x in a row. Only touches
+            # pure-emoji replies (leaves echoed popular comments & text replies as
+            # they are). Done here (not in decide_reaction) because it depends on
+            # what we've already sent this run.
+            if decision.action == Action.AUTO_REPLY:
+                decision.reply_text = diversify_reply(
+                    decision.reply_text or "", decision.reply_source or "",
+                    ctx.comments or [], self.config.profile,
+                    self.config.settings, self._recent_replies)
+                self._recent_replies.append(decision.reply_text or "")
 
             replied = False
             send_failed = False
