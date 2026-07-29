@@ -156,6 +156,38 @@ class TestRunnerEndToEnd(unittest.TestCase):
         self.assertEqual(replied_ids, {"A", "C"})
         self.assertEqual({s[1] for s in backend.sent}, {"A", "C"})
 
+    def test_same_reel_yielded_twice_replies_once(self):
+        """Within-run duplicate guard (regression for the live double-send):
+        the real backend's newest-first enumeration can hand the SAME physical
+        reel to the runner twice in one run (its scroll-based "skip" landed on
+        the same reel again after the first reply mutated the thread). Both
+        yields carry different reel_ids but IDENTICAL comments. The runner must
+        react only ONCE, not send two different replies to the one reel."""
+        def laugh_reel(rid):  # strong 💀-consensus -> auto-reply
+            return {
+                "id": rid, "comment_count": 240,
+                "comments": ([{"text": "LMAOO 💀💀", "likes": 90}] * 3
+                             + [{"text": "im deceased 💀", "likes": 40}] * 10
+                             + [{"text": "😭", "likes": 5}] * 5),
+            }
+
+        # Two DIFFERENT ids, SAME content — mimics one reel enumerated twice.
+        fixture = {"chats": {"Feed": {"reels": [
+            laugh_reel("newreel#0"), laugh_reel("newreel#1"),
+        ]}}}
+        cfg = AppConfig(
+            profile=Profile(emoji_prefs=["💀", "😭", "😂"],
+                            common_replies=["bro 💀", "💀"],
+                            reply_style=ReplyStyle.SINGLE),
+            settings=Settings(), enabled_chats=["Feed"],
+        )
+        backend = SimulatedBackend(fixture)
+        summary = self._runner(backend, cfg).run()
+
+        self.assertEqual(len(summary.auto_replied), 1,
+                         "the same reel must be replied to only once")
+        self.assertEqual(len(backend.sent), 1)
+
     def test_reacted_reels_not_remembered_flagged_reels_are(self):
         """Dedup-policy regression (resend-reels-should-react):
         a reel we REACTED to must NOT be written to the SeenStore — otherwise a

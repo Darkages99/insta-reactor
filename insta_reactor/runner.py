@@ -41,9 +41,20 @@ class Runner:
         # Replies actually chosen this run, in order — lets diversify_reply keep
         # us from sending the same emoji reaction 3+ times in a row.
         self._recent_replies: list[str] = []
+        # Comment-signatures of reels we've actually REACTED to during THIS run.
+        # Safety net against the backend's newest-first enumeration re-selecting
+        # a reel it already handled (its positional "skip" is scroll-based and
+        # can land on the same physical reel twice after a reply mutates the
+        # thread — observed live: artby_arco reel got two different replies).
+        # Within a single run, a second yield with an identical comment
+        # signature is that same physical reel, not a genuine re-send (re-sends
+        # are handled across runs by the watermark, deliberately NOT by content
+        # — see resend-reels-should-react). Reset per run in run().
+        self._reacted_sigs: set = set()
 
     def run(self) -> RunSummary:
         summary = RunSummary()
+        self._reacted_sigs = set()   # fresh per run (see field doc)
         self.backend.prepare()
 
         for chat_name in self.config.enabled_chats:
@@ -104,6 +115,14 @@ class Runner:
                          "continuing the sweep", reel.reel_id, chat_name)
                 self.backend.discard_reel(reel)
                 continue
+            if sig is not None and sig in self._reacted_sigs:
+                # Same physical reel the enumeration already handed us (and we
+                # reacted to) earlier in THIS run — don't reply to it twice.
+                log.info("reel %s in %r has the same comments as one already "
+                         "reacted to this run — skipping to avoid a duplicate "
+                         "reply", reel.reel_id, chat_name)
+                self.backend.discard_reel(reel)
+                continue
 
             decision = decide_reaction(
                 ctx, self.config.profile, self.config.settings, model=self.model)
@@ -130,6 +149,8 @@ class Runner:
             if decision.action == Action.AUTO_REPLY and self.send:
                 if self.backend.send_reply(reel, decision.reply_text or ""):
                     replied = True
+                    if sig is not None:
+                        self._reacted_sigs.add(sig)
                 else:
                     send_failed = True
                     decision = Decision(

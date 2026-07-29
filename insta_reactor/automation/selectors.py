@@ -60,6 +60,16 @@ STATE_FINGERPRINTS = {
         # (confirmed against the clips_viewer fixture) and sufficient alone.
     ],
     "COMMENTS": [
+        # CONFIRMED live (shyam chat, "watch and comment" split layout): this
+        # IG build exposes comment rows under the BARE resource-id
+        # `row_comment_textview_comment` (no `com.instagram.android:id/`
+        # prefix), and none of the older fingerprints below are present — so
+        # wait_for_state(COMMENTS) was timing out even though comments had
+        # opened cleanly, wrongly flagging every reel "unable to read
+        # comments". The bare id only appears once comments are open (the plain
+        # reel viewer has none), so it's a safe, comment-specific fingerprint.
+        {"resource_id": "row_comment_textview_comment"},
+        {"resource_id": "row_comment_textview_reply_button"},
         {"resource_id": "com.instagram.android:id/comment_overswipe_dismiss_container"},
         {"resource_id": "com.instagram.android:id/layout_comment_thread_edittext_multiline"},
         {"textContains": "Comments"},
@@ -73,6 +83,27 @@ STATE_FINGERPRINTS = {
 INBOX_TAB_BUTTON = [
     {"resource_id": "com.instagram.android:id/direct_tab"},
     {"desc": "Message"},
+]
+
+# One inbox thread row, used to fingerprint the visible list so the scan knows
+# when a scroll actually advanced (vs. reached the bottom). CONFIRMED live: this
+# IG build renders each row as an `android.view.View` whose content-desc is
+# "<name>, <preview> ·, <time>" (the username itself is a bare, resource-id-less
+# TextView), and the old `row_inbox_username` id matches NOTHING here — so the
+# scan's signature was always empty, instantly false-tripped "end of list", and
+# never scrolled to reach a row further down (e.g. 'shyam'). The comma is always
+# present in a row's desc, so descContains=", " selects exactly the rows.
+INBOX_ROW = [
+    {"className": "android.view.View", "descContains": ", "},
+    {"resource_id": "com.instagram.android:id/row_inbox_username"},
+]
+
+# The open DM thread's header title (the account name at the top of the chat).
+# CONFIRMED live: resource-id `header_title`, text/desc == the account name.
+# Used to VERIFY we opened the exact chat we meant to — a substring name clash
+# (e.g. tapping "40fitandshyam" when targeting "shyam") must never pass.
+THREAD_TITLE = [
+    {"resource_id": "com.instagram.android:id/header_title"},
 ]
 
 # NOTE: currently unused by navigator.open_chat — it used to fall back to this
@@ -109,6 +140,14 @@ OPEN_COMMENTS_BUTTON = [
 # content-desc (== its `text` in the accessibility tree) is the pattern
 # "<username> said <comment text>". The collector strips the "X said " prefix.
 COMMENT_ROW_TEXT = [
+    # CONFIRMED live (shyam chat): comment rows carry the BARE resource-id
+    # `row_comment_textview_comment` (no package prefix) whose `text` is the
+    # clean comment ("Dholakpur files😂") and whose `desc` is the
+    # "<username> said <comment>" form the stripper handles. Tried first so we
+    # read real rows, never the broad TextView fallback (which also matches
+    # usernames/counts/chrome). The package-prefixed id and the " said "
+    # ViewGroup form are kept for other IG builds.
+    {"resource_id": "row_comment_textview_comment"},
     {"className": "android.view.ViewGroup", "descContains": " said "},
     {"resource_id": "com.instagram.android:id/row_comment_textview_comment"},
     {"className": "android.widget.TextView"},
@@ -167,6 +206,26 @@ REPLY_BAR_HEART_REACTION = [
 REPLY_BAR_REACTION_SHEET_BUTTON = [
     {"resource_id": "com.instagram.android:id/reply_bar_reaction_sheet_button"},
     {"desc": "Open emoji reaction sheet"},
+]
+
+# Vanish / "disappearing messages" mode. Instagram engages this when you
+# over-scroll (pull UP) past the newest message at the very bottom of a thread.
+# It is dangerous for us: the composer switches to disappearing messages and the
+# pull animation keeps the screen changing, so a naive scroll loop never settles.
+# We detect it so the scroll code can abort and back out before it fully engages.
+# NOTE: these strings are a best-effort guess at IG's vanish UI copy and MUST be
+# calibrated against the real screen the first time vanish mode is reproduced on
+# device (dump the hierarchy while it's engaged and confirm/extend this list).
+# Kept broad (substring match) and vanish-specific so normal chat never matches.
+VANISH_MODE_INDICATORS = [
+    {"textContains": "Vanish"},
+    {"descContains": "Vanish"},
+    {"textContains": "vanish"},
+    {"descContains": "vanish"},
+    {"textContains": "Disappearing"},
+    {"textContains": "disappearing"},
+    {"descContains": "Disappearing"},
+    {"textContains": "disappear"},
 ]
 
 # Things that count as interruptions to dismiss (best-effort text/desc match).

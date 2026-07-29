@@ -26,6 +26,12 @@ class Navigator:
     def __init__(self, device: Device, settle: float = 0.8):
         self.d = device
         self.settle = settle   # seconds to wait for the UI to settle after an action
+        # Last screen coordinate the comments button was found at via the
+        # normal selector match — reel-viewer chrome is at a fixed position
+        # regardless of the reel's content, so this survives across reels
+        # and backs up open_comments() when the icon is undetectable
+        # (e.g. a white icon on a white-background reel).
+        self.comments_button_center: tuple[int, int] | None = None
 
     # ---- low-level matcher helpers --------------------------------------
     def _find_any(self, candidates: list[dict]) -> UiNode | None:
@@ -168,6 +174,17 @@ class Navigator:
                 continue
             self.d.tap_node(row)
             if self.wait_for_state(State.CHAT):
+                opened = self._current_chat_title()
+                if opened is not None and opened != chat_name:
+                    # Opened the wrong thread (e.g. a name that merely contains
+                    # the target). Back out and try again rather than operate on
+                    # the wrong account.
+                    log.info("open_chat %r: opened wrong thread %r — backing out "
+                              "(attempt %d/%d)", chat_name, opened,
+                              attempt + 1, attempts)
+                    self.d.press_back()
+                    self._pause()
+                    continue
                 log.info("open_chat %r: reached State.CHAT", chat_name)
                 return True
             log.info("open_chat %r: tapped row but never reached State.CHAT "
@@ -176,17 +193,49 @@ class Navigator:
             self._pause()
         return False
 
+    def _current_chat_title(self) -> str | None:
+        """The open DM thread's header title (account name), or None if we
+        can't read it. Used to confirm we opened the intended chat."""
+        node = self._find_any(S.THREAD_TITLE)
+        if node is None:
+            return None
+        return (node.text or node.desc or "").strip() or None
+
     def _find_inbox_row(self, chat_name: str) -> UiNode | None:
-        return (self.d.find(resource_id="com.instagram.android:id/row_inbox_username",
+        """Locate `chat_name`'s inbox row by EXACT username — never a substring.
+
+        A substring match is dangerous: targeting "shyam" must not open
+        "40fitandshyam" (confirmed live — a descContains fallback did exactly
+        that). So we match the bare username TextView by exact text, and for the
+        container fallback we parse the row's content-desc ("<name>, <preview>,
+        <time>") and require its first field to equal `chat_name` exactly.
+        """
+        exact = (self.d.find(resource_id="com.instagram.android:id/row_inbox_username",
                              text=chat_name)
-                or self.d.find(text=chat_name))
+                 or self.d.find(text=chat_name))
+        if exact:
+            return exact
+        for n in self.d.find_all(className="android.view.View", descContains=", "):
+            name = (n.desc or "").split(",", 1)[0].strip()
+            if name == chat_name:
+                return n
+        return None
 
     def _inbox_row_signature(self) -> tuple:
         """Cheap fingerprint of the visible inbox rows, to detect when
-        scrolling stops making progress (reached the bottom of the list)."""
-        nodes = self.d.find_all(
-            resource_id="com.instagram.android:id/row_inbox_username")
-        return tuple((n.text, n.bounds[1]) for n in nodes)
+        scrolling stops making progress (reached the bottom of the list).
+
+        Tries each INBOX_ROW selector and fingerprints the first that matches
+        anything — the old `row_inbox_username` id matches nothing on current IG
+        builds, which made this always-empty and false-tripped 'end of list' on
+        the very first scan step (so rows further down, like 'shyam', were never
+        reached). Row containers are keyed by their content-desc, which changes
+        as the list scrolls and stabilizes only at the true bottom."""
+        for matcher in S.INBOX_ROW:
+            nodes = self.d.find_all(**matcher)
+            if nodes:
+                return tuple((n.text or n.desc, n.bounds[1]) for n in nodes)
+        return ()
 
     def scroll_inbox_to_top(self, max_swipes: int = 10) -> None:
         """Scroll the inbox thread list up to the newest (top) thread."""
@@ -231,10 +280,27 @@ class Navigator:
 
     def open_comments(self) -> bool:
         btn = self._find_any(S.OPEN_COMMENTS_BUTTON)
-        if not btn:
-            return False
-        self.d.tap_node(btn)
-        return self.wait_for_state(State.COMMENTS)
+        if btn:
+            self.d.tap_node(btn)
+            ok = self.wait_for_state(State.COMMENTS)
+            log.info("open_comments: button found by selector at %s, tap+wait "
+                      "-> COMMENTS=%s", btn.center, ok)
+            if ok:
+                self.comments_button_center = btn.center
+            return ok
+        if self.comments_button_center is not None:
+            # Some reels (bright/white-background posts) render the comment
+            # icon in a color that blends into the background and the
+            # selector can't find it — confirmed live. The button's screen
+            # position is fixed reel-viewer chrome regardless of the reel's
+            # content, so reuse the last coordinate we found it at.
+            log.warning("open_comments: button not found by selector (icon "
+                        "may blend into a light-background reel) — tapping "
+                        "last known chrome coordinate %s",
+                        self.comments_button_center)
+            self.d.tap(*self.comments_button_center)
+            return self.wait_for_state(State.COMMENTS)
+        return False
 
     def close_comments(self) -> bool:
         self.d.press_back()
@@ -329,9 +395,18 @@ class Navigator:
     # ---- thread scrolling ------------------------------------------------
     def _thread_signature(self) -> tuple:
         """A cheap fingerprint of the visible thread, to detect when a scroll
-        stops making progress (i.e. we've hit the top or bottom)."""
+        stops making progress (i.e. we've hit the top or bottom).
+
+        Must include reel bubbles, not just text: consecutive reels can scroll
+        past with no nearby text changing at all (e.g. back-to-back reel
+        shares), which made a text-only signature repeat while a whole new
+        reel had actually scrolled into view — stalling scroll_thread_to_bottom
+        one screen short of the real bottom (missed the newest reel, live)."""
         tvs = self.d.find_all(className="android.widget.TextView")[:8]
-        return tuple((tv.text, tv.bounds[1]) for tv in tvs)
+        reels = self.d.find_all(
+            resource_id="com.instagram.android:id/reel_share_item_view")
+        return (tuple((tv.text, tv.bounds[1]) for tv in tvs),
+                tuple(r.bounds for r in reels))
 
     def scroll_thread_to_top(self, max_swipes: int = 18) -> None:
         """Scroll the open thread all the way up to the oldest message."""
@@ -346,6 +421,41 @@ class Navigator:
             self.d.swipe(w // 2, int(h * 0.28), w // 2, int(h * 0.84), 0.30)
             self._pause(0.6)
 
+    # ---- vanish / disappearing mode guard --------------------------------
+    def detect_vanish_mode(self) -> bool:
+        """True if Instagram's vanish / disappearing-messages mode is engaged
+        (or being pulled into). See S.VANISH_MODE_INDICATORS. Cheap on-screen
+        text check; used to abort scrolling before an over-scroll fully engages
+        vanish mode, which would otherwise send our reactions as disappearing
+        messages and trap the scroll loop in an unsettling pull animation."""
+        return self._exists_any(S.VANISH_MODE_INDICATORS)
+
+    def exit_vanish_mode(self) -> bool:
+        """Best-effort: get back out of vanish/disappearing mode.
+
+        Leaving the thread turns vanish mode off (its messages disappear on
+        exit), so we first try to release any in-progress over-scroll pull with
+        a downward swipe, then press Back to leave the thread if it's still
+        engaged. The caller is expected to re-open the thread (in normal mode)
+        afterwards. Returns True if the vanish indicators are gone.
+        """
+        if not self.detect_vanish_mode():
+            return True
+        log.warning("vanish mode detected — attempting to back out")
+        w, h = self.d.window_size()
+        # reverse an over-scroll pull: drag content back DOWN (toward older),
+        # the opposite of the up-pull that engages vanish mode.
+        self.d.swipe(w // 2, int(h * 0.35), w // 2, int(h * 0.78), 0.30)
+        self._pause(0.6)
+        if not self.detect_vanish_mode():
+            log.info("vanish mode released by reverse swipe")
+            return True
+        self.d.press_back()
+        self._pause()
+        gone = not self.detect_vanish_mode()
+        log.info("vanish mode after Back: %s", "cleared" if gone else "STILL ON")
+        return gone
+
     def scroll_thread_to_bottom(self, max_swipes: int = 6) -> None:
         """Gently scroll the open thread down to the newest message.
 
@@ -355,21 +465,32 @@ class Navigator:
         animation keeps changing the screen, so a naive "stop when the screen
         stops moving" loop never stops and fully engages vanish mode. To stay
         safe we (a) use short, mid-screen swipes that never start at the bottom
-        edge, and (b) stop the instant the thread stops advancing. A freshly
-        opened DM thread already sits at the newest message, so usually no
-        swipe is needed at all.
+        edge, (b) stop the instant the thread stops advancing, and (c) check for
+        vanish mode after each swipe and immediately back out of it if the pull
+        started to engage. A freshly opened DM thread already sits at the newest
+        message, so usually no swipe is needed at all.
         """
         w, h = self.d.window_size()
         last = None
         for _ in range(max_swipes):
+            if self.detect_vanish_mode():
+                log.warning("scroll_thread_to_bottom: vanish mode engaging — "
+                            "aborting scroll and backing out")
+                self.exit_vanish_mode()
+                return
             sig = self._thread_signature()
             if sig == last:
                 return
             last = sig
             # short mid-screen drag up -> reveals slightly newer content while
             # staying clear of the bottom-edge over-scroll (vanish-mode) zone.
-            self.d.swipe(w // 2, int(h * 0.60), w // 2, int(h * 0.40), 0.30)
+            self.d.swipe(w // 2, int(h * 0.58), w // 2, int(h * 0.44), 0.30)
             self._pause(0.6)
+        # one final check: the last swipe itself may have tipped into vanish mode.
+        if self.detect_vanish_mode():
+            log.warning("scroll_thread_to_bottom: vanish mode after final swipe "
+                        "— backing out")
+            self.exit_vanish_mode()
 
     def thread_scroll_down(self, amount: float = 0.5) -> bool:
         """Scroll the thread toward newer messages by ~`amount` of the screen.

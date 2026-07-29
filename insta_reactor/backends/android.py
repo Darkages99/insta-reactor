@@ -413,9 +413,12 @@ class AndroidBackend(Backend):
                                    read_error=True)
 
             if not self.nav.open_comments():
-                self.nav.back_to_chat()
-                return ReelContext(chat_name=self._chat, reel_id=reel_id,
-                                   read_error=True)
+                learned = (self.nav.comments_button_center is None
+                           and self._learn_comments_button_coords(node))
+                if not (learned and self.nav.open_comments()):
+                    self.nav.back_to_chat()
+                    return ReelContext(chat_name=self._chat, reel_id=reel_id,
+                                       read_error=True)
 
             comments, count = self.collector.collect(
                 limit=self.config.settings.comments_to_read)
@@ -563,15 +566,85 @@ class AndroidBackend(Backend):
                 best, best_d = n, d
         return best
 
+    def _learn_comments_button_coords(self, problem_node: UiNode) -> bool:
+        """Recover from a reel whose comments button the selector can't find
+        (e.g. a white icon on a white-background reel — confirmed live on
+        shyam's "artby_arco" reel) by sampling the button's screen position
+        from a DIFFERENT reel in the same thread, then returning to the one
+        we actually want to react to. The reel-viewer bottom bar sits at a
+        fixed screen position for every reel regardless of its content, so a
+        coordinate learned from one reel is reusable on another. Leaves us
+        back in `problem_node`'s reel viewer on success; caller must retry
+        open_comments() (now backed by the learned coordinate) afterwards.
+        """
+        if self.nav.detect_state() != State.CHAT and not self.nav.back_to_chat():
+            log.info("_learn_comments_button_coords: couldn't get back to CHAT")
+            return False
+        donor = None
+        for n in self.d.find_all(
+                resource_id="com.instagram.android:id/reel_share_item_view"):
+            if n.bounds != problem_node.bounds:
+                donor = n
+                break
+        if donor is None:
+            # no other reel currently on screen — scroll to reveal a neighbour.
+            self.nav.thread_scroll_up(amount=0.3)
+            for n in self.d.find_all(
+                    resource_id="com.instagram.android:id/reel_share_item_view"):
+                if n.bounds != problem_node.bounds:
+                    donor = n
+                    break
+        if donor is None:
+            log.info("_learn_comments_button_coords: no donor reel available")
+            return False
+        log.info("_learn_comments_button_coords: donor reel bounds=%s", donor.bounds)
+
+        self.d.tap_node(donor)
+        if self.nav.wait_for_state(State.REEL_VIEWER):
+            btn = self.nav._find_any(S.OPEN_COMMENTS_BUTTON)
+            if btn is not None:
+                self.nav.comments_button_center = btn.center
+                log.info("_learn_comments_button_coords: learned %s from donor "
+                          "reel", btn.center)
+            else:
+                log.info("_learn_comments_button_coords: donor reel opened but "
+                          "its comments button wasn't found either")
+        else:
+            log.info("_learn_comments_button_coords: donor reel didn't open "
+                      "(never reached REEL_VIEWER)")
+        self.nav.back_to_chat()
+        if self.nav.comments_button_center is None:
+            return False
+
+        target = self._relocate_reel_node(problem_node) or problem_node
+        self.d.tap_node(target)
+        reopened = self.nav.wait_for_state(State.REEL_VIEWER)
+        log.info("_learn_comments_button_coords: reopened problem reel=%s",
+                  reopened)
+        return reopened
+
     def _preceding_text_for_node(self, node: UiNode) -> str | None:
         """Return the incoming text message immediately above the reel, if any.
 
         Rule 1: text right before a reel may carry context/an inside joke, so
         we must NOT automate. We look for an incoming (left-aligned) text bubble
         whose bottom edge sits just above the reel's top edge.
+
+        A text bubble sandwiched between two reels is the sender's follow-up
+        comment on the OLDER reel above it, not a preamble to the newer one
+        below — confirmed live (shyam chat: "Nakiduchchu po" sat between an
+        older reel and the newest one, and got wrongly attributed as preceding
+        text of the newest reel, permanently blocking it from ever
+        auto-replying). So we skip any candidate that already sits within the
+        following-text gap of a different, older reel.
         """
         width, _ = self.d.window_size()
         reel_top = node.bounds[1]
+        older_reel_bottoms = [
+            n.bounds[3] for n in self.d.find_all(
+                resource_id="com.instagram.android:id/reel_share_item_view")
+            if n.bounds[3] <= reel_top and n.bounds != node.bounds
+        ]
         attribution = self._attribution_labels()
         best_text = None
         best_bottom = -1
@@ -585,9 +658,14 @@ class AndroidBackend(Backend):
             cx = (l + r) // 2
             incoming = cx < width / 2
             gap = reel_top - b
-            if incoming and 0 <= gap < 220 and b > best_bottom:
-                best_bottom = b
-                best_text = txt
+            if not (incoming and 0 <= gap < 220 and b > best_bottom):
+                continue
+            claimed_by_older_reel = any(
+                0 <= (t - ob) < 220 for ob in older_reel_bottoms)
+            if claimed_by_older_reel:
+                continue
+            best_bottom = b
+            best_text = txt
         return best_text
 
     def _following_text_for_node(self, node: UiNode) -> str | None:
