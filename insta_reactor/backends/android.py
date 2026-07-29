@@ -317,10 +317,11 @@ class AndroidBackend(Backend):
                 newest = reels[-1]          # largest y => closest to bottom
                 if skipped == k:
                     return newest
-                # advance the cursor: push this reel below the fold so the next
-                # scan's bottom-most reel is the preceding (older) one.
-                before_bottom = newest.bounds[3]
-                self.nav.scroll_node_below_fold(before_bottom, zb)
+                # advance the cursor: push this reel's CENTER below the fold so
+                # the next scan's bottom-most reel is the preceding (older) one.
+                # (Center, not bottom — the loose-visibility test keys off the
+                # center; pushing only the bottom re-selected the same reel.)
+                self.nav.scroll_node_below_fold(newest.center[1], zb)
                 skipped += 1
                 continue
             # nothing visible in the band — reveal older messages above.
@@ -550,7 +551,9 @@ class AndroidBackend(Backend):
                      count - 1, bottom_reel.bounds[1], wm_top)
             if count >= cap:
                 return cap
-            self.nav.scroll_node_below_fold(bottom_reel.bounds[3], zb)
+            # advance past this reel by pushing its CENTER below the fold (see
+            # scroll_node_below_fold) so we don't re-count the same one.
+            self.nav.scroll_node_below_fold(bottom_reel.center[1], zb)
         return min(count, cap)
 
     def _relocate_reel_node(self, node: UiNode) -> UiNode | None:

@@ -15,6 +15,10 @@ data/calib/
 data/calib_dms/
 templates/*.png
 
+# scratch/debug UI dumps (adb uiautomator captures, ad-hoc probe output)
+scratch_*.xml
+scratch_*.txt
+
 # IDE
 .idea/
 

@@ -117,6 +117,29 @@ INBOX_SEARCH = [
     {"resource_id": "com.instagram.android:id/action_bar_search_edit_text"},
 ]
 
+# The "+"-style compose button in the inbox's top-right corner. CONFIRMED live
+# (2026-07-29): some existing threads — e.g. an infrequently-opened group chat
+# — never appear in the scrollable Direct list no matter how far down you
+# scroll (confirmed by manually scrolling 150+ weeks deep), yet they DO exist:
+# opening this button's search and typing the name surfaces them under a
+# "Suggested" header, and tapping that result opens the REAL existing thread
+# (its actual message history), not a newly created one. content-desc is
+# "New Message"; no stable resource-id was present on this build.
+NEW_MESSAGE_BUTTON = [
+    {"desc": "New Message"},
+]
+
+# The search field on the "New message" screen opened by NEW_MESSAGE_BUTTON.
+NEW_MESSAGE_SEARCH_FIELD = [
+    {"resource_id": "com.instagram.android:id/search_edit_text"},
+]
+
+# One result row's primary name label on that search screen (used both for
+# suggested/existing threads and for people-search results).
+NEW_MESSAGE_RESULT_ROW = [
+    {"resource_id": "com.instagram.android:id/row_user_primary_name"},
+]
+
 # A received reel bubble inside a thread. Confirmed on-device: the bubble's
 # media container has this resource-id and no content-desc; it's not itself
 # marked clickable in the accessibility tree (the tap still lands correctly

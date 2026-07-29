@@ -9,6 +9,7 @@ lost. Nothing here assumes a tap succeeded.
 from __future__ import annotations
 
 import logging
+import re
 import time
 
 from ..device.base import Device, UiNode
@@ -16,6 +17,32 @@ from . import selectors as S
 from .states import State, INSTAGRAM_PACKAGE, MAX_BACK_TO_INBOX
 
 log = logging.getLogger("insta_reactor.navigator")
+
+
+# Emoji / pictograph / symbol ranges to strip when matching a DM by name. Many
+# display names carry decorative emojis (e.g. "freakhan😋💥🧽") the user can't
+# easily type, so we compare names with these removed. Matching stays EXACT on
+# the remaining text, so this does NOT reintroduce substring clashes
+# ("40fitandshyam" normalizes to itself, still != "shyam").
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F300-\U0001FAFF"   # symbols & pictographs (emoticons, transport,
+                               #   supplemental, extended-A, skin tones)
+    "\U0001F1E6-\U0001F1FF"   # regional indicator letters (flags)
+    "\U00002600-\U000027BF"   # misc symbols + dingbats
+    "\U00002B00-\U00002BFF"   # misc symbols and arrows
+    "\U00002190-\U000021FF"   # arrows
+    "\U0000FE00-\U0000FE0F"   # variation selectors
+    "\U00002000-\U0000206F"   # general punctuation (zero-width joiner, etc.)
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def normalize_chat_name(name: str) -> str:
+    """A DM display name with decorative emojis/symbols and surrounding
+    whitespace removed, for tolerant (but still exact-on-text) name matching."""
+    return _EMOJI_RE.sub("", name or "").strip()
 
 
 class NavigationError(RuntimeError):
@@ -168,6 +195,17 @@ class Navigator:
                           chat_name)
                 row = self._scan_inbox_for_row(chat_name)
             if not row:
+                log.info("open_chat %r: not in scrollable inbox — trying New "
+                          "Message search (attempt %d/%d)",
+                          chat_name, attempt + 1, attempts)
+                row = self._search_new_message(chat_name)
+                if not row:
+                    # Back out of whatever the search left on screen (the New
+                    # Message screen's Back returns straight to the inbox) so
+                    # the next attempt's ensure_inbox() starts clean.
+                    self.d.press_back()
+                    self._pause()
+            if not row:
                 log.info("open_chat %r: row not found (attempt %d/%d)",
                           chat_name, attempt + 1, attempts)
                 self._pause()
@@ -175,7 +213,8 @@ class Navigator:
             self.d.tap_node(row)
             if self.wait_for_state(State.CHAT):
                 opened = self._current_chat_title()
-                if opened is not None and opened != chat_name:
+                if (opened is not None
+                        and normalize_chat_name(opened) != normalize_chat_name(chat_name)):
                     # Opened the wrong thread (e.g. a name that merely contains
                     # the target). Back out and try again rather than operate on
                     # the wrong account.
@@ -215,9 +254,44 @@ class Navigator:
                  or self.d.find(text=chat_name))
         if exact:
             return exact
+        # Emoji-tolerant pass: compare the row's username (the first field of its
+        # content-desc) to the target with decorative emojis stripped from both,
+        # so "freakhan" matches a "freakhan😋💥🧽" row. Still exact on the
+        # remaining text — no substring clash.
+        target = normalize_chat_name(chat_name)
         for n in self.d.find_all(className="android.view.View", descContains=", "):
-            name = (n.desc or "").split(",", 1)[0].strip()
-            if name == chat_name:
+            name = (n.desc or "").split(",", 1)[0]
+            if normalize_chat_name(name) == target:
+                return n
+        return None
+
+    def _search_new_message(self, chat_name: str) -> UiNode | None:
+        """Fallback for a chat the scrollable Direct list never surfaces.
+
+        CONFIRMED live (2026-07-29): an infrequently-opened group thread was
+        absent from the inbox list scrolled 150+ weeks deep, yet the "New
+        Message" (+) button's search found it under a "Suggested" header, and
+        tapping that result opened the REAL existing thread (with its actual
+        message history) rather than starting a new one. Matches by EXACT
+        normalized name, same rule as `_find_inbox_row` — no substring clash.
+        """
+        btn = self._find_any(S.NEW_MESSAGE_BUTTON)
+        if not btn:
+            return None
+        self.d.tap_node(btn)
+        self._pause()
+        field = self._find_any(S.NEW_MESSAGE_SEARCH_FIELD)
+        if not field:
+            self.d.press_back()
+            self._pause()
+            return None
+        self.d.tap_node(field)
+        self._pause(0.4)
+        self.d.input_text(chat_name)
+        self._pause(1.2)
+        target = normalize_chat_name(chat_name)
+        for n in self.d.find_all(**S.NEW_MESSAGE_RESULT_ROW[0]):
+            if normalize_chat_name(n.text or "") == target:
                 return n
         return None
 
@@ -526,15 +600,23 @@ class Navigator:
         self.d.swipe(w // 2, y_start, w // 2, zone_top, 0.30)
         self._pause(0.6)
 
-    def scroll_node_below_fold(self, bottom: int, zone_bottom: int) -> None:
-        """Scroll the thread down (toward older) just enough to push the element
-        whose current bottom edge is `bottom` below `zone_bottom`, so it's no
-        longer a candidate. Advances the newest-first (from-bottom) reel cursor
-        deterministically — the mirror of scroll_node_above_fold.
-        """
+    def scroll_node_below_fold(self, center: int, zone_bottom: int) -> None:
+        """Scroll the thread down (toward older) far enough to push the element
+        whose vertical CENTER is `center` below `zone_bottom`, so it's no longer
+        a candidate. Advances the newest-first (from-bottom) reel cursor.
+
+        Must clear the CENTER, not just the bottom edge: the from-bottom
+        loose-visibility test keys off the reel's center, so pushing only the
+        bottom past the fold left a tall reel's center still in-band — it stayed
+        the bottom-most reel and the enumeration re-selected it while the cursor
+        blindly advanced, producing two replies to ONE reel (confirmed live).
+        The margin below is sized so any reel that was inside the tappable zone
+        clears in a single swipe. Content scrolls DOWN (toward older) — the safe
+        direction, away from the bottom over-scroll that engages vanish mode."""
         w, h = self.d.window_size()
-        # move content down by (zone_bottom - bottom) + a margin (min 18% screen)
-        distance = max(int(h * 0.18), (zone_bottom - bottom) + int(h * 0.10))
-        y_start = max(int(h * 0.16), zone_bottom - distance)
-        self.d.swipe(w // 2, y_start, w // 2, zone_bottom, 0.30)
+        # move content down until `center` is comfortably past zone_bottom
+        distance = max(int(h * 0.18), (zone_bottom - center) + int(h * 0.18))
+        y_start = max(int(h * 0.10), zone_bottom - distance)
+        # slower swipe (longer duration) to curb fling/momentum overshoot
+        self.d.swipe(w // 2, y_start, w // 2, zone_bottom, 0.40)
         self._pause(0.6)
