@@ -17,22 +17,17 @@ from __future__ import annotations
 import html
 import json
 import logging
-import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 from .config import AppConfig, load_config, save_config
 from .flags import FlagManager
-from .models import FlagKind
+from .notify import notify_from_summary
 from .report import summarize
 from .runner import Runner
 from .seen_store import SeenStore
 
 log = logging.getLogger("insta_reactor.webui")
-
-_UNSURE_KINDS = {FlagKind.NO_CONSENSUS, FlagKind.LOW_CONFIDENCE,
-                 FlagKind.TOO_FEW_COMMENTS, FlagKind.CONTEXT_TEXT}
-_ERROR_KINDS = {FlagKind.NAV_FAILED, FlagKind.UNABLE_TO_READ}
 
 _PAGE = """<!doctype html>
 <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,23 +49,6 @@ pre {{ white-space: pre-wrap; background: #000; padding: 1em; border-radius: 8px
 {result}
 </body></html>
 """
-
-
-def _notify(topic: str, title: str, message: str) -> None:
-    if not topic:
-        log.info("ntfy_topic not set; skipping notification: %s — %s",
-                  title, message)
-        return
-    try:
-        req = urllib.request.Request(
-            f"https://ntfy.sh/{topic}",
-            data=message.encode("utf-8"),
-            headers={"Title": title, "Priority": "high"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=10).close()
-    except Exception:
-        log.exception("failed to send ntfy notification")
 
 
 def _run_selected(config: AppConfig, chat_names: list[str], queue_path: str,
@@ -137,18 +115,7 @@ class Handler(BaseHTTPRequestHandler):
             summary = _run_selected(config, selected, self.queue_path,
                                      self.seen_path)
             result = f"<pre>{html.escape(summarize(summary))}</pre>"
-
-            unsure = [d for d in summary.flagged
-                      if d.flag and d.flag.kind in _UNSURE_KINDS]
-            errors = [d for d in summary.flagged
-                      if d.flag and d.flag.kind in _ERROR_KINDS]
-            if errors:
-                _notify(config.ntfy_topic, "Insta Reactor: errors",
-                        f"{len(errors)} reel(s) hit an error — "
-                        f"open the app to review.")
-            if unsure:
-                _notify(config.ntfy_topic, "Insta Reactor: needs you",
-                        f"{len(unsure)} reel(s) need manual review.")
+            notify_from_summary(config.ntfy_topic, summary)
 
         self._send_html(_PAGE.format(chat_rows=rows, result=result))
 

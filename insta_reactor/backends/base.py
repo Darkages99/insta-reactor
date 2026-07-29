@@ -58,6 +58,16 @@ class Backend(ABC):
     def return_to_inbox(self) -> None:
         """Get back to the inbox so the next chat can be processed."""
 
+    # ---- plain-text messages --------------------------------------------
+    def unanswered_incoming_texts(self, cap: int = 8) -> list[str]:
+        """Return incoming plain-text messages in the current chat that arrived
+        since our last reply (newest-first-bounded), most you'd want a human to
+        answer. The bot only reacts to reels, so these are surfaced/flagged.
+
+        Default: none (fixtures carry only reels). Real backends override.
+        """
+        return []
+
     # ---- per-reel iteration ---------------------------------------------
     def iter_reels(self) -> Iterator[tuple[ReelHandle, ReelContext]]:
         """Yield (reel, context) for each unreacted reel, one at a time.

@@ -93,6 +93,23 @@ class Runner:
             summary.add(d)
             return
 
+        # Surface plain text messages (even one). The bot only reacts to reels,
+        # so any incoming text needs a human — we flag it and push a notification
+        # so nothing gets silently left on read. Done before the reel sweep so
+        # the watermark is read pre-reply. Never let this abort the chat.
+        try:
+            for txt in self.backend.unanswered_incoming_texts():
+                d = Decision(
+                    action=Action.FLAG,
+                    flag=Flag(FlagKind.INCOMING_TEXT, txt),
+                    chat_name=chat_name,
+                    reel_id="text",
+                )
+                self.flags.enqueue(d)
+                summary.add(d)
+        except Exception:
+            log.exception("incoming-text scan failed for %r", chat_name)
+
         seen = 0
         for reel, ctx in self.backend.iter_reels():
             seen += 1

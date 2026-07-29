@@ -192,6 +192,9 @@ class FlagKind:
     UNABLE_TO_READ = "unable_to_read"
     LOW_CONFIDENCE = "low_confidence"
     NAV_FAILED = "nav_failed"
+    # A plain text message in the chat (not a reel). The bot only reacts to
+    # reels, so any incoming text — even a single one — is surfaced to you.
+    INCOMING_TEXT = "incoming_text"
 
 
 @dataclass

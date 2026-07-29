@@ -184,9 +184,20 @@ def cmd_run(args) -> int:
     if args.plan_only:
         print("(plan-only: nothing was actually sent)")
     if summary.flagged:
-        print(f"\n{len(summary.flagged)} reel(s) need your attention — "
+        print(f"\n{len(summary.flagged)} item(s) need your attention — "
               f"saved to {args.queue}")
         print("Review them anytime with:  python -m insta_reactor queue")
+
+    # Push alerts to the phone (text messages, couldn't-respond, needs-review),
+    # unless this was a dry run. Works the same whether launched from the PC or
+    # the on-device Termux runner, so you get told without watching the PC.
+    if not args.plan_only:
+        from .notify import notify_from_summary
+        notify_from_summary(config.ntfy_topic, summary)
+        if not config.ntfy_topic and summary.flagged:
+            print("\n(no ntfy_topic set — push notifications were skipped. "
+                  "Set one with:  python -m insta_reactor webui --ntfy-topic "
+                  "<your-topic>  then subscribe to it in the ntfy app.)")
     return 0
 
 

@@ -37,6 +37,17 @@ _ZONE_BOTTOM = 0.82
 _MAX_SWEEP_STEPS = 60   # hard cap on scroll+scan iterations per reel lookup
 _MAX_REELS = 40         # absolute cap on reels handled per thread (safety)
 
+# Incoming-text detection tuning. A shared reel's own caption/description renders
+# as a plain TextView near the reel and can be hundreds of chars long; a typed DM
+# almost never is. Anything longer than this is treated as a reel caption / pasted
+# blurb, not a chat message worth a "reply manually" alert.
+_MAX_TEXT_MSG_LEN = 220
+# How far up the thread to hunt for new text when we CAN see our last reply
+# (bounded by that watermark anyway). Without a watermark we don't scroll at all.
+_MAX_TEXT_SCROLL_STEPS = 8
+# Snippet length for the flag reason / push body (full text lives in the app).
+_TEXT_SNIPPET_LEN = 160
+
 # Known IG UI hint strings that render as TextViews near a shared reel but are
 # not chat messages at all (tap/hold hints, reaction hints, etc).
 _UI_HINT_STRINGS = {
@@ -555,6 +566,93 @@ class AndroidBackend(Backend):
             # scroll_node_below_fold) so we don't re-count the same one.
             self.nav.scroll_node_below_fold(bottom_reel.center[1], zb)
         return min(count, cap)
+
+    def _reel_rects(self) -> list[tuple[int, int, int, int]]:
+        """Bounds of every shared-reel bubble on screen. Used to drop a reel's
+        own caption/description TextViews, which render INSIDE the bubble and
+        would otherwise look like incoming chat text (confirmed live on freakhan:
+        a long Hungarian reel caption leaked in as four 'messages')."""
+        return [n.bounds for n in self.d.find_all(
+            resource_id="com.instagram.android:id/reel_share_item_view")]
+
+    def _incoming_text_bubbles(self, zt: int, zb: int, w: int) -> list[tuple[int, str]]:
+        """(top_y, text) for every incoming (left-aligned) plain-text message
+        bubble currently in the tappable band. Filters out the same non-message
+        TextViews the reel-context scans do: reel author labels, react-hint
+        footers, IG UI chrome, and bare handles — plus any TextView whose center
+        sits inside a shared-reel bubble (that's the reel's own caption, not a
+        chat message). Sorted top-first (y-asc)."""
+        attribution = self._attribution_labels()
+        reel_rects = self._reel_rects()
+        out: list[tuple[int, str]] = []
+        for tv in self.d.find_all(className="android.widget.TextView"):
+            if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
+                continue
+            txt = (tv.text or "").strip()
+            if not txt or txt in attribution or _is_ui_chrome_or_label(txt):
+                continue
+            if len(txt) > _MAX_TEXT_MSG_LEN:
+                # a reel caption / pasted blurb, not a typed message
+                log.info("skipping long non-message text (%d chars): %.40r",
+                         len(txt), txt)
+                continue
+            l, t, r, b = tv.bounds
+            cx, cy = (l + r) // 2, (t + b) // 2
+            if not (cx < w / 2 and t >= zt and b <= zb):   # left-aligned, in band
+                continue
+            if any(rl <= cx <= rr and rt <= cy <= rb
+                   for (rl, rt, rr, rb) in reel_rects):     # reel's own caption
+                continue
+            out.append((t, txt))
+        return sorted(out, key=lambda it: it[0])
+
+    def unanswered_incoming_texts(self, cap: int = 8) -> list[str]:
+        """Incoming plain-text messages newer than our most recent reply.
+
+        Same run-start position watermark idea as `_new_reel_budget`: our own
+        most recent outgoing message marks the boundary between what we've
+        already dealt with and what arrived since. Any incoming text bubble
+        BELOW that boundary (newer) is unanswered and gets surfaced — the bot
+        only reacts to reels, so it can never answer text itself.
+
+        Scrolling policy (deliberately conservative to avoid alert-flooding):
+          * With a watermark visible, we may scroll up to gather multi-screen
+            runs of new text, but the watermark bounds it and we cap the steps.
+          * With NO watermark (we've never replied, or our last reply is off the
+            bottom screen), we do NOT go spelunking through the whole history —
+            we report only the current bottom screenful, since we can't tell
+            what's genuinely new from what's ancient.
+        Returned oldest-first, each truncated to a notification-friendly snippet.
+        """
+        if not self._anchor_chat_bottom():
+            return []
+        w, h = self.d.window_size()
+        zt, zb = int(h * _ZONE_TOP), int(h * _ZONE_BOTTOM)
+        collected: list[str] = []   # newest-first while building
+        seen: set[str] = set()
+        for _ in range(_MAX_TEXT_SCROLL_STEPS):
+            wm_top = self._newest_outgoing_top(zt, zb, w)
+            bubbles = self._incoming_text_bubbles(zt, zb, w)
+            reached = False
+            for t, txt in reversed(bubbles):        # newest (lowest) first
+                if wm_top is not None and t <= wm_top:
+                    reached = True                  # older than our last reply
+                    break
+                if txt in seen:
+                    continue
+                seen.add(txt)
+                collected.append(txt)
+                if len(collected) >= cap:
+                    reached = True
+                    break
+            if reached or wm_top is None:
+                # reached the watermark/cap, OR no watermark => don't history-dive
+                break
+            if not self.nav.thread_scroll_up(amount=0.3):
+                break
+        snip = [t if len(t) <= _TEXT_SNIPPET_LEN else t[:_TEXT_SNIPPET_LEN] + "…"
+                for t in reversed(collected)]
+        return snip
 
     def _relocate_reel_node(self, node: UiNode) -> UiNode | None:
         """Find the on-screen reel bubble closest to `node` (fresh bounds after

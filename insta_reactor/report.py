@@ -12,6 +12,7 @@ FLAG_LABEL = {
     FlagKind.UNABLE_TO_READ: "unable to read comments",
     FlagKind.LOW_CONFIDENCE: "low confidence",
     FlagKind.NAV_FAILED: "navigation failed",
+    FlagKind.INCOMING_TEXT: "text message (needs a human reply)",
 }
 
 
