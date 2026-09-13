@@ -111,10 +111,71 @@ class BrowserBackend(Backend):
         return self.driver.page
 
     # ---- navigation -----------------------------------------------------
+    # JS: dismiss screen-time / well-being interstitials ("You're in sleep
+    # mode", "You've reached your daily limit", "Take a break"). These cover the
+    # whole thread and INTERCEPT every reel-open click — the top cause of
+    # reels wrongly flagged "unable to read" — and their only control is an "OK"
+    # button, which the "Not Now"/Close handling below never matches. Clicks the
+    # dialog's dismiss button in-page; returns how many it closed.
+    _DISMISS_SCREENTIME_JS = """
+    () => {
+      let n = 0;
+      const RX = /(sleep mode|daily limit|reached your daily|you've been on instagram|take a break|taking a break|time to close)/i;
+      const clickable = (el) => {
+        for (let i = 0; i < 4 && el; i++) {
+          if (el && (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button')) return el;
+          el = el && el.parentElement;
+        }
+        return null;
+      };
+      // Case 1: role=dialog nags ("You're in sleep mode") with an OK/Continue button.
+      for (const d of document.querySelectorAll('div[role="dialog"]')) {
+        if (!RX.test(d.innerText || '')) continue;
+        const btns = [...d.querySelectorAll('button, [role="button"], a[role="button"]')];
+        const hit = btns.find(b => /^(ok|got it|continue|dismiss|close|not now)$/i
+                                     .test((b.innerText || '').trim()));
+        const target = hit || btns[btns.length - 1];
+        if (target) { target.click(); n++; }
+      }
+      if (n) return n;
+      // Case 2: full-page interstitial ("You've reached your daily limit") that is
+      // NOT a role=dialog. Only treat it as blocking if a screen-time overlay
+      // actually COVERS the viewport centre (avoids false-firing on residual
+      // hidden text elsewhere in the DOM). Then click its Close (X).
+      const el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      let root = null;
+      for (let a = el; a; a = a.parentElement) {
+        const r = a.getBoundingClientRect();
+        if (r.width > innerWidth * 0.8 && r.height > innerHeight * 0.8
+            && RX.test(a.innerText || '')) { root = a; break; }
+      }
+      if (root) {
+        const x = root.querySelector('[aria-label="Close"], svg[aria-label="Close"]')
+               || document.querySelector('[aria-label="Close"], svg[aria-label="Close"]');
+        const btn = x && (clickable(x) || x);
+        if (btn) { btn.click(); n++; }
+      }
+      return n;
+    }
+    """
+
+    def _kill_screentime(self) -> int:
+        """Dismiss any screen-time well-being modal currently up. Cheap + safe to
+        call liberally (it only touches dialogs whose text matches the nag
+        phrases). Returns how many it closed; never raises."""
+        try:
+            return int(self.page.evaluate(self._DISMISS_SCREENTIME_JS) or 0)
+        except Exception:
+            return 0
+
     def _dismiss_overlays(self) -> None:
-        """Clear post-login interstitials ("Save your login info?", "Turn on
-        notifications") that overlay the inbox and intercept clicks. Best-effort;
-        never raises."""
+        """Clear interstitials that overlay the inbox/thread and intercept
+        clicks: post-login ("Save your login info?", "Turn on notifications")
+        AND screen-time well-being nags ("You're in sleep mode", "daily limit").
+        Best-effort; never raises."""
+        # Screen-time modals first — they're full-screen and block everything.
+        if self._kill_screentime():
+            self.page.wait_for_timeout(300)
         for txt in ("Not Now", "Not now", "Not now."):
             try:
                 btn = self.page.locator(
@@ -124,8 +185,8 @@ class BrowserBackend(Backend):
                     self.page.wait_for_timeout(500)
             except Exception:
                 pass
-        # Screen-time nags ("You've reached your daily limit") and other modals
-        # expose only a Close (X) control — click it, then Escape as a catch-all.
+        # Other modals expose only a Close (X) control — click it, then Escape
+        # as a catch-all.
         try:
             close = self.page.locator(
                 '[aria-label="Close"], svg[aria-label="Close"]')
@@ -182,6 +243,7 @@ class BrowserBackend(Backend):
             return True
         # Fallback: the search box (thread may be scrolled out of the inbox).
         try:
+            self._kill_screentime()   # else the modal swallows the box click
             box = page.locator('input[placeholder="Search"]')
             box.click()
             box.fill(chat_name)
@@ -268,6 +330,9 @@ class BrowserBackend(Backend):
         # thread loads — retry a few times before concluding there are none.
         descs = []
         for _ in range(4):
+            # A screen-time nag can cover the thread and stop reels from
+            # rendering/being found — clear it each attempt before enumerating.
+            self._kill_screentime()
             descs = [d for d in self._reel_descriptors() if self._is_target(d)]
             if descs:
                 break
@@ -363,6 +428,11 @@ class BrowserBackend(Backend):
         cx = box.get("x", 0) + box.get("w", 0) / 2
         cy = box.get("y", 0) + box.get("h", 0) / 2
         try:
+            # A screen-time nag ("sleep mode"/"daily limit") can pop up mid-run
+            # and sits on top of the thread, swallowing this click. Clear it
+            # first — otherwise the reel never opens and we mis-flag it
+            # "unable to read".
+            self._kill_screentime()
             self.page.mouse.click(cx, cy)
             self.page.wait_for_timeout(1200)
             shortcode = self._shortcode_from_url()
