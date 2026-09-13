@@ -63,6 +63,11 @@ class Profile:
     reply_style: str = ReplyStyle.SINGLE
     # Optional: extra slang -> canonical Emotion, e.g. {"finished": "DEAD"}
     extra_slang: dict[str, str] = field(default_factory=dict)
+    # Short phrases you've explicitly OK'd for the bot to reuse verbatim on any
+    # reel, on top of bare emoji reactions. Everything else you've ever typed
+    # is too contextual to safely generalize, so it's excluded from training
+    # (see engine.normalize.is_trainable_reply). Hand-edited in config.json.
+    approved_phrases: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -74,6 +79,7 @@ class Profile:
             common_replies=list(d.get("common_replies", [])),
             reply_style=d.get("reply_style", ReplyStyle.SINGLE),
             extra_slang={k: v for k, v in d.get("extra_slang", {}).items()},
+            approved_phrases=list(d.get("approved_phrases", [])),
         )
 
 
@@ -114,6 +120,27 @@ class Settings:
     # toward 1.0 to trust the model more on ambiguous free-text comments.
     ensemble_model_weight: float = 0.4
 
+    # --- remote LLM (OpenAI-compatible, e.g. OpenRouter) --------------------
+    # Off by default => fully deterministic + private, the original behaviour.
+    # When on, the LLM is consulted ONLY for reels the deterministic engine
+    # would otherwise flag as no_consensus/low_confidence (llm_mode="assist"),
+    # so cost stays proportional to the ambiguous tail, not every reel. It can
+    # only ever UPGRADE a flag into an in-style auto-reply — never override a
+    # confident deterministic decision. The API key never lives here; it comes
+    # from env/data/secrets.json (see secrets.py). Set "always" to run it on
+    # every auto-reply candidate, "off" to disable without clearing use_llm.
+    use_llm: bool = False
+    llm_mode: str = "assist"                      # off | assist | always
+    llm_model: str = "openai/gpt-4o-mini"
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_timeout: float = 20.0
+    llm_max_tokens: int = 120
+    llm_max_reply_len: int = 40       # reject model replies longer than this
+    llm_min_confidence: float = 0.55  # below this, keep the human flag
+    rag_top_k: int = 5                # past examples fed to the LLM as few-shot
+    log_interactions: bool = True     # append decisions to the interaction log
+    log_raw_text: bool = False        # also store raw comment text (debug/opt-in)
+
     # --- reply selection ----------------------------------------------------
     # "Very popular" comments can be echoed back verbatim as the reaction.
     popular_min_likes: int = 50       # abs. like floor to qualify as "very popular"
@@ -133,6 +160,19 @@ class Settings:
     # its own to skip the crowd-consensus gate (min_top_share/min_margin).
     # The confidence gate still applies as a floor.
     personal_echo_min_matches: int = 2
+
+    # --- native reel reaction -------------------------------------------------
+    # When on, single-emoji replies are first attempted via IG's real long-press
+    # reaction sheet (Navigator.react_to_reel_in_viewer) instead of being typed
+    # into the reply composer. Falls back to the typed reply automatically if
+    # the native gesture fails, so this is safe to leave on. Multi-emoji and
+    # text+emoji replies always use the typed path (the sheet is single-pick).
+    native_reaction_enabled: bool = True
+
+    # --- browser backend (Instagram web via Playwright) ----------------------
+    # Run the automation browser without a visible window. Keep False for the
+    # first run so the user can log into Instagram once in the opened window.
+    browser_headless: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -174,6 +214,15 @@ class ReelContext:
     comments: Optional[list[Comment]] = None  # None => could not read (error)
     comment_count: Optional[int] = None     # reported total (may exceed len(comments))
     read_error: bool = False
+    # The reel's own caption (poster's text) — the single strongest signal of
+    # what the reel is actually ABOUT. Fed to the LLM so it reacts to the content
+    # itself, not just the crowd's (often hype) comments. Empty/None when the
+    # backend couldn't read it; the pipeline degrades to comments-only.
+    caption: Optional[str] = None
+    # Filesystem path to a screenshot of the reel's thumbnail, captured by the
+    # browser backend. Lets the UI show a *picture* of any un-reacted reel
+    # instead of an opaque "reel #2". None for backends that don't capture one.
+    thumbnail_path: Optional[str] = None
 
     def effective_count(self) -> int:
         if self.comment_count is not None:
@@ -240,8 +289,11 @@ class Decision:
     chat_name: str = ""
     reel_id: str = ""
     # How reply_text was chosen: "popular_verbatim" | "favourite_match" |
-    # "emotion" (fallback). Purely for explainability / the summary.
+    # "emotion" (fallback) | "llm" (AI-synthesised). For explainability/summary.
     reply_source: Optional[str] = None
+    # Screenshot of the reel's thumbnail (copied from its ReelContext), so the
+    # UI can show un-reacted reels as a gallery of pictures.
+    thumbnail_path: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)

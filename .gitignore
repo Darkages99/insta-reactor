@@ -11,9 +11,19 @@ venv/
 data/config.json
 data/review_queue.json
 data/handled_reels.json
+data/secrets.json
+data/interaction_log.jsonl
 data/calib/
 data/calib_dms/
+data/calib_learn/
+data/calib_learn2/
+data/calib_learn3/
+data/coldstart_scans/
 templates/*.png
+
+# browser backend runtime (Playwright profile + captured reel thumbnails)
+data/browser_profile/
+data/thumbs/
 
 # scratch/debug UI dumps (adb uiautomator captures, ad-hoc probe output)
 scratch_*.xml

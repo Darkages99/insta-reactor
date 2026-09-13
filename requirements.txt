@@ -1,8 +1,19 @@
 # The deterministic core (engine, rules, runner, CLI, simulation, tests) needs
 # NOTHING here — it is pure standard-library Python 3.10+.
 #
-# These are ONLY needed to drive a real Android phone / emulator:
+# --- BROWSER backend (the V3-browser pivot: drive Instagram web on a PC) ------
+# This is the recommended runtime now: fast DOM automation instead of slow phone
+# accessibility, the PC stays usable, and the phone is free. See browser/.
+playwright>=1.40         # drives Instagram web (its own Chrome profile; no ADB)
+Flask>=3.0               # the local control-panel + thumbnail-gallery web UI
+# After installing: `python -m playwright install chromium` (one-time browser DL).
+
+# --- ANDROID backend (legacy phone path) -------------------------------------
+# ONLY needed to drive a real Android phone / emulator:
 uiautomator2>=3.0        # on-device UI automation (taps, swipes, dumps, screenshots)
+Pillow>=10.0             # pixel sampling (cold-start bubble-color check); already
+                         # pulled in transitively by uiautomator2, declared directly
+                         # since android.py now imports it via screenshot().getpixel()
 
 # Optional: computer-vision fallback for locating icons by appearance.
 # Install only if accessibility selectors aren't enough on your IG version.

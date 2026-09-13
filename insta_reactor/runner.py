@@ -9,26 +9,45 @@ were about to reply yourself, nobody gets left on read by a bot that jumped in.
 from __future__ import annotations
 
 import logging
+import uuid
 
 from .backends.base import Backend
 from .config import AppConfig
 from .engine.reaction import decide_reaction
 from .engine.reply_select import diversify_reply
 from .engine.classifier import build_model
+from .engine.llm_reply import suggest_reply
+from .engine.normalize import extract_emojis
+from .llm.client import build_llm
+from .rag.store import RagStore
+from . import interaction_log
 from .flags import FlagManager
 from .seen_store import SeenStore, signature
 from .models import (
-    Decision, Action, Flag, FlagKind, RunSummary,
+    Decision, Action, Flag, FlagKind, RunSummary, CANON_EMOJI,
 )
 
 log = logging.getLogger("insta_reactor.runner")
+
+
+def _is_emoji_only(text: str) -> bool:
+    """True if `text` is one or more emoji and nothing else — the only shape
+    the native reaction sheet can send (Backend.send_reaction)."""
+    return bool(extract_emojis(text)) and not any(ch.isalnum() for ch in text)
+
+# Flags the LLM assist is allowed to try to rescue: the crowd was unreadable to
+# the *rules*, but a language model may still find a safe, in-style reaction.
+# Deliberately excludes CONTEXT_TEXT / INCOMING_TEXT (need a human), UNABLE_TO_READ
+# and TOO_FEW_COMMENTS (no signal to work with).
+_LLM_RESCUABLE = {FlagKind.NO_CONSENSUS, FlagKind.LOW_CONFIDENCE}
 
 
 class Runner:
     def __init__(self, backend: Backend, config: AppConfig,
                  flag_manager: FlagManager | None = None,
                  send: bool = True,
-                 seen_store: SeenStore | None = None):
+                 seen_store: SeenStore | None = None,
+                 log_path: str | None = None):
         self.backend = backend
         self.config = config
         self.flags = flag_manager or FlagManager()
@@ -38,6 +57,17 @@ class Runner:
         self.seen = seen_store if seen_store is not None else SeenStore()
         # Offline emotion model (None unless enabled+installed => rules only).
         self.model = build_model(config.settings)
+        # Remote LLM (None unless use_llm + a key => deterministic only) and the
+        # RAG memory of your past reactions that grounds its suggestions.
+        self.llm = build_llm(config.settings)
+        # Where interaction records are appended (injectable so tests stay
+        # hermetic; production uses data/interaction_log.jsonl).
+        self._log_path = log_path or interaction_log.DEFAULT_LOG_PATH
+        self.rag = (RagStore.load(self._log_path,
+                                  approved_phrases=config.profile.approved_phrases)
+                    if self.llm is not None else RagStore())
+        # Correlates every logged decision (and any later override) to this run.
+        self._run_id = uuid.uuid4().hex[:12]
         # Replies actually chosen this run, in order — lets diversify_reply keep
         # us from sending the same emoji reaction 3+ times in a row.
         self._recent_replies: list[str] = []
@@ -79,6 +109,67 @@ class Runner:
         self.flags.save()
         self.seen.save()
         return summary
+
+    def _grounding(self, decision: Decision) -> str:
+        """One-line description of the deterministic crowd analysis, fed to the
+        LLM so its synthesis builds on a real signal, not a blind guess."""
+        emo = decision.winning_emotion
+        if not emo:
+            return ""
+        rep = CANON_EMOJI.get(emo, "")
+        return (f"- strongest crowd emotion: {emo} {rep}\n"
+                f"- consensus strength: {decision.confidence:.2f} (0=none, 1=total)")
+
+    def _maybe_llm(self, ctx, decision: Decision) -> Decision:
+        """AI-native reply layer — let the LLM compose the reaction.
+
+        Two triggers, both no-ops unless the LLM is enabled (use_llm + a key):
+          * RESCUE  — the rules FLAGGED an ambiguous reel (no_consensus/
+            low_confidence); the model may still find a safe, in-style reply,
+            UPGRADING the flag to an auto-reply.
+          * SYNTHESISE — with settings.llm_mode == "always", the model composes
+            the reply for EVERY auto-reply candidate, grounded by the crowd
+            analysis + your style + RAG. This is the "AI-native" path: the model
+            intelligently synthesises the reaction from the comments.
+
+        The model can only ever produce a safe, in-style, length-checked reply;
+        on any failure/refusal the deterministic decision is kept untouched, so
+        the AI can improve a reply but never make things worse. Never raises.
+        """
+        if self.llm is None:
+            return decision
+        mode = getattr(self.config.settings, "llm_mode", "assist")
+        is_rescue = (decision.action == Action.FLAG and decision.flag
+                     and decision.flag.kind in _LLM_RESCUABLE)
+        is_synth = decision.action == Action.AUTO_REPLY and mode == "always"
+        if not (is_rescue or is_synth):
+            return decision
+        try:
+            examples = self.rag.format_examples(
+                self.rag.retrieve(ctx, self.config.settings.rag_top_k))
+            sugg = suggest_reply(ctx, self.config.profile, self.config.settings,
+                                 self.llm, examples, self._grounding(decision))
+        except Exception:
+            log.exception("LLM reply failed for reel %s", decision.reel_id)
+            return decision
+        if sugg is None:
+            return decision   # rescue: keep the flag; synth: keep deterministic
+        log.info("LLM %s reel %s -> %r (conf %.2f)",
+                 "rescued" if is_rescue else "synthesised",
+                 decision.reel_id, sugg.reply_text, sugg.confidence)
+        return Decision(
+            action=Action.AUTO_REPLY,
+            reply_text=sugg.reply_text,
+            reply_source=sugg.source,           # "llm"
+            winning_emotion=decision.winning_emotion,
+            # synth keeps the (already-passing) deterministic confidence as a
+            # floor; rescue takes the model's, which had to clear llm_min_confidence.
+            confidence=max(decision.confidence, sugg.confidence) if is_synth
+            else sugg.confidence,
+            breakdown=decision.breakdown,
+            chat_name=decision.chat_name,
+            reel_id=decision.reel_id,
+        )
 
     def _process_chat(self, chat_name: str, summary: RunSummary) -> None:
         log.info("opening chat %r", chat_name)
@@ -149,6 +240,15 @@ class Runner:
             decision.chat_name = decision.chat_name or chat_name
             decision.reel_id = decision.reel_id or reel.reel_id
 
+            # AI-native reply: let the (RAG-grounded, crowd-grounded) model
+            # compose the reaction — rescuing an ambiguous flag, or synthesising
+            # every reply when llm_mode="always". No-op unless use_llm + a key.
+            decision = self._maybe_llm(ctx, decision)
+
+            # Carry the reel's thumbnail onto the decision so the UI can show a
+            # picture of it (esp. for reels we could NOT react to).
+            decision.thumbnail_path = getattr(ctx, "thumbnail_path", None)
+
             # Reply variety: vary the emoji count / blend in a common non-favourite
             # emoji, and never send the same reaction 3x in a row. Only touches
             # pure-emoji replies (leaves echoed popular comments & text replies as
@@ -164,7 +264,17 @@ class Runner:
             replied = False
             send_failed = False
             if decision.action == Action.AUTO_REPLY and self.send:
-                if self.backend.send_reply(reel, decision.reply_text or ""):
+                text = decision.reply_text or ""
+                sent = False
+                # Bare emoji replies get a real long-press-style reaction
+                # first; anything that isn't a clean emoji-only string (or
+                # that fails the native gesture) falls back to the typed
+                # reply path, unchanged from before.
+                if (_is_emoji_only(text) and self.config.settings.native_reaction_enabled):
+                    sent = self.backend.send_reaction(reel, text)
+                if not sent:
+                    sent = self.backend.send_reply(reel, text)
+                if sent:
                     replied = True
                     if sig is not None:
                         self._reacted_sigs.add(sig)
@@ -177,6 +287,7 @@ class Runner:
                         chat_name=chat_name, reel_id=reel.reel_id,
                         confidence=decision.confidence,
                         breakdown=decision.breakdown,
+                        thumbnail_path=getattr(ctx, "thumbnail_path", None),
                     )
 
             if not replied:
@@ -199,6 +310,14 @@ class Runner:
             if self.send and not send_failed and flagged:
                 self.seen.mark(sig)
             summary.add(decision)
+
+            # Append to the interaction log — the corpus RAG, correction
+            # learning, and the eval harness all read from. Never aborts a run.
+            if self.config.settings.log_interactions:
+                interaction_log.log_decision(
+                    ctx, decision, sent=replied, run_id=self._run_id,
+                    path=self._log_path,
+                    log_raw_text=self.config.settings.log_raw_text)
 
         log.info("chat %r: processed %d reel(s)", chat_name, seen)
         self.backend.return_to_inbox()

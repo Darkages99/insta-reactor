@@ -227,6 +227,192 @@ def cmd_queue(args) -> int:
     return 0
 
 
+def cmd_coldstart(args) -> int:
+    """Derive the profile from the user's own past messages — no wizard.
+
+    Reads messages from --from FILE (one per line). The on-device path will feed
+    these from Backend.iter_own_recent_messages instead; this file mode lets you
+    bootstrap/inspect it now.
+    """
+    from .onboarding.cold_start import derive_profile
+
+    if args.live_chat:
+        from .backends.android import AndroidBackend
+        from .onboarding import coldstart_state as state
+        cfg = load_config(args.config) if config_exists(args.config) else AppConfig()
+        backend = AndroidBackend(cfg)
+        backend.prepare()
+        if not backend.open_chat(args.live_chat):
+            print(f"Could not open chat: {args.live_chat!r}")
+            return 1
+        resume_after = state.load_resume_marker(args.live_chat)
+        if resume_after is not None:
+            print(f"Resuming {args.live_chat!r} from where the last scan left off "
+                  f"(Ctrl+C any time — progress is saved after every reel).")
+
+        def _on_group(found: dict, is_new: bool) -> None:
+            # Persist after EVERY group, not at the end: a kill/interrupt
+            # (phone needed back mid-scan) loses at most the one group being
+            # read right now, never the whole run.
+            state.save_resume_marker(args.live_chat, found)
+            if is_new and found["reply_text"]:
+                state.append_pairs(args.live_chat, [found])
+                print(f"  [{found['kind']:5}] {found['reply_text']}")
+
+        try:
+            pairs = backend.scan_organic_reactions(
+                max_reels=args.max_reels, resume_after=resume_after,
+                on_group=_on_group)
+        finally:
+            backend.close()
+        print(f"\nFound {len(pairs)} new organic reel reaction(s) this run.")
+        all_pairs = state.load_all_pairs(args.live_chat)
+        print(f"{len(all_pairs)} total accumulated across all scans of "
+              f"{args.live_chat!r}.")
+        messages = [p["reply_text"] for p in all_pairs]
+        print()
+    elif not args.from_file:
+        print("Provide a message file (--from FILE) or a live chat (--live-chat NAME)")
+        return 1
+    else:
+        with open(args.from_file, "r", encoding="utf-8") as f:
+            messages = [line.rstrip("\n") for line in f]
+    messages = [m for m in messages if m.strip()]
+    if not messages:
+        print("No messages found.")
+        return 1
+
+    existing = load_config(args.config) if config_exists(args.config) else AppConfig()
+    profile = derive_profile(messages, existing=existing.profile,
+                             approved_phrases=existing.profile.approved_phrases)
+    print(f"Derived from {len(messages)} messages:")
+    print(f"  emoji_prefs   : {' '.join(profile.emoji_prefs) or '(none)'}")
+    print(f"  reply_style   : {profile.reply_style}")
+    print(f"  common_replies: {', '.join(profile.common_replies) or '(none)'}")
+    if args.apply:
+        existing.profile = profile
+        save_config(existing, args.config)
+        print(f"\nSaved to {args.config}")
+    else:
+        print("\n(dry run — re-run with --apply to save)")
+    return 0
+
+
+def cmd_learn(args) -> int:
+    """Fold your logged corrections back into the profile + confidence bar."""
+    from .interaction_log import read_all, read_kind
+    from .learning.corrections import learn_profile, agreement_rate, adapt_settings
+
+    records = list(read_all(args.log))
+    overrides = [r for r in records if r.get("kind") == "override"]
+    if not overrides:
+        print("No corrections logged yet — nothing to learn from.")
+        return 0
+
+    cfg = load_config(args.config) if config_exists(args.config) else AppConfig()
+    new_profile = learn_profile(cfg.profile, overrides,
+                                approved_phrases=cfg.profile.approved_phrases)
+    agree = agreement_rate(records)
+    n_proposals = sum(1 for r in records
+                      if r.get("kind") == "decision" and r.get("action") == "auto_reply")
+    new_settings = adapt_settings(cfg.settings, agree, n_proposals)
+
+    print(f"Learned from {len(overrides)} correction(s):")
+    print(f"  emoji_prefs   : {' '.join(cfg.profile.emoji_prefs)}"
+          f"  ->  {' '.join(new_profile.emoji_prefs)}")
+    print(f"  reply_style   : {cfg.profile.reply_style}  ->  {new_profile.reply_style}")
+    print(f"  common_replies: +{len(new_profile.common_replies) - len(cfg.profile.common_replies)} new")
+    print(f"  agreement rate: {'n/a' if agree is None else f'{agree:.0%}'}"
+          f"  (over {n_proposals} proposals)")
+    print(f"  min_confidence: {cfg.settings.auto_reply_min_confidence}"
+          f"  ->  {new_settings.auto_reply_min_confidence}")
+    if args.apply:
+        cfg.profile = new_profile
+        cfg.settings = new_settings
+        save_config(cfg, args.config)
+        print(f"\nSaved to {args.config}")
+    else:
+        print("\n(dry run — re-run with --apply to save)")
+    return 0
+
+
+def cmd_eval(args) -> int:
+    """Grade the engine against your logged behaviour (see tools/eval_harness)."""
+    from .interaction_log import read_all
+    from .tools.eval_harness import evaluate
+
+    profile = settings = None
+    if args.replay:
+        cfg = load_config(args.config)
+        profile, settings = cfg.profile, cfg.settings
+    rep = evaluate(read_all(args.log), profile, settings)
+    if args.json:
+        print(json.dumps(rep.to_dict()))
+    else:
+        print(rep.summary())
+    return 0
+
+
+def cmd_browser_ui(args) -> int:
+    """Launch the local web control-panel for the browser backend."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    from .web.app import run_server
+    run_server(args.config, port=args.port)
+    return 0
+
+
+def cmd_browser_run(args) -> int:
+    """Run the reactor against Instagram *web* (Playwright), headless-friendly.
+
+    Scripting/testing counterpart of the web UI. Sending is restricted to the
+    processed chats by default; `--allow-chat NAME` narrows it further (the
+    testing guardrail), `--send-anywhere` removes the restriction.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    from .browser.backend import BrowserBackend
+    from .seen_store import SeenStore
+
+    cfg = load_config(args.config) if config_exists(args.config) else AppConfig()
+    chats = args.chat or cfg.enabled_chats
+    if not chats:
+        print("No chats. Use --chat NAME (repeatable) or `chats add`.")
+        return 1
+    cfg.enabled_chats = chats
+    if args.use_llm:
+        cfg.settings.use_llm = True
+        cfg.settings.llm_mode = "always"       # AI-native: synthesise every reply
+    if args.headless:
+        cfg.settings.browser_headless = True
+
+    if args.send_anywhere:
+        whitelist = None
+    elif args.allow_chat:
+        whitelist = set(args.allow_chat)
+    else:
+        whitelist = set(chats)                 # default: only the chats we visit
+
+    backend = BrowserBackend(cfg, send_whitelist=whitelist,
+                             target_direction=args.target)
+    runner = Runner(backend, cfg, FlagManager(args.queue),
+                    send=not args.plan_only, seen_store=SeenStore(args.seen))
+    try:
+        summary = runner.run()
+    except RuntimeError as e:
+        # Most commonly: not logged in to Instagram in the automation browser.
+        print(f"Could not run: {e}")
+        return 2
+    finally:
+        try:
+            backend.close()
+        except Exception:
+            pass
+    if args.json:
+        print(json.dumps(to_dict(summary, plan_only=args.plan_only)))
+        return 0
+    print(summarize(summary, verbose=args.verbose, plan_only=args.plan_only))
+    return 0
+
+
 def cmd_explain(args) -> int:
     config = load_config(args.config)
     backend = SimulatedBackend.from_file(args.simulate)
@@ -295,6 +481,34 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"))
     sp.set_defaults(func=cmd_webui)
 
+    sp = sub.add_parser("browser-ui",
+                        help="launch the browser-backend web control panel")
+    sp.add_argument("--port", type=int, default=8770)
+    sp.set_defaults(func=cmd_browser_ui)
+
+    sp = sub.add_parser("browser-run",
+                        help="run against Instagram web (Playwright); scriptable")
+    sp.add_argument("--chat", action="append", default=[],
+                    help="chat to process (repeatable); default = enabled_chats")
+    sp.add_argument("--plan-only", action="store_true",
+                    help="decide + summarize but never send")
+    sp.add_argument("--target", choices=["incoming", "any"], default="incoming",
+                    help="'incoming' = react to reels others sent (real use); "
+                         "'any' = react regardless of direction (testing)")
+    sp.add_argument("--allow-chat", action="append", default=[],
+                    help="restrict ALL sending to these chats (safety guardrail)")
+    sp.add_argument("--send-anywhere", action="store_true",
+                    help="remove the send restriction (send in any processed chat)")
+    sp.add_argument("--use-llm", action="store_true",
+                    help="AI-native: LLM synthesises every reply (needs a key)")
+    sp.add_argument("--headless", action="store_true",
+                    help="run the browser without a visible window")
+    sp.add_argument("--verbose", action="store_true")
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
+    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"))
+    sp.set_defaults(func=cmd_browser_run)
+
     sp = sub.add_parser("queue", help="show pending manual-review items")
     sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
     sp.set_defaults(func=cmd_queue)
@@ -302,6 +516,34 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("explain", help="print full reasoning for a fixture")
     sp.add_argument("--simulate", required=True, metavar="FIXTURE.json")
     sp.set_defaults(func=cmd_explain)
+
+    _LOG_DEFAULT = os.path.join("data", "interaction_log.jsonl")
+
+    sp = sub.add_parser("coldstart",
+                        help="derive the profile from your own past messages")
+    sp.add_argument("--from", dest="from_file", metavar="MESSAGES.txt",
+                    help="text file of your sent messages, one per line")
+    sp.add_argument("--live-chat", metavar="NAME",
+                    help="scan this real chat's reel reactions on-device "
+                         "(requires adb + uiautomator2)")
+    sp.add_argument("--max-reels", type=int, default=40,
+                    help="cap on reel reactions to scan with --live-chat")
+    sp.add_argument("--apply", action="store_true", help="save to config.json")
+    sp.set_defaults(func=cmd_coldstart)
+
+    sp = sub.add_parser("learn",
+                        help="fold your logged corrections into the profile")
+    sp.add_argument("--log", default=_LOG_DEFAULT)
+    sp.add_argument("--apply", action="store_true", help="save to config.json")
+    sp.set_defaults(func=cmd_learn)
+
+    sp = sub.add_parser("eval", help="grade the engine vs your logged behaviour")
+    sp.add_argument("--log", default=_LOG_DEFAULT)
+    sp.add_argument("--replay", action="store_true",
+                    help="replay past reels through the current engine "
+                         "(needs raw comments in the log)")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(func=cmd_eval)
 
     return p
 

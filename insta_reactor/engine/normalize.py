@@ -63,6 +63,21 @@ def extract_emojis(text: str) -> list[str]:
     return out
 
 
+def is_trainable_reply(text: str, approved_phrases: list[str] | None = None) -> bool:
+    """True if `text` is safe to reuse verbatim as a future reply/example.
+
+    Highly contextual replies ("wait that's literally me") only make sense for
+    the reel they were sent to, so the bot has no way to know when reusing them
+    would be right. Only bare emoji reactions (no letters/digits alongside the
+    emoji) and phrases you've explicitly pre-approved are safe to generalize.
+    """
+    emojis = extract_emojis(text)
+    if emojis and not any(ch.isalnum() for ch in text):
+        return True
+    approved = {p.strip().lower() for p in (approved_phrases or [])}
+    return text.strip().lower() in approved
+
+
 def _clean_text(text: str) -> str:
     """Lowercase, drop emojis, turn punctuation into spaces, squeeze runs."""
     text = text.lower()

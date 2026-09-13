@@ -230,6 +230,9 @@ REPLY_BAR_REACTION_SHEET_BUTTON = [
     {"resource_id": "com.instagram.android:id/reply_bar_reaction_sheet_button"},
     {"desc": "Open emoji reaction sheet"},
 ]
+# Variation-stripped forms that should hit the confirmed heart fast-path
+# instead of the (uncalibrated) reaction sheet search.
+HEART_ALIASES = {"❤", "♥"}
 
 # Vanish / "disappearing messages" mode. Instagram engages this when you
 # over-scroll (pull UP) past the newest message at the very bottom of a thread.

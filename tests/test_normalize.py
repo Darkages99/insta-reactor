@@ -2,7 +2,7 @@ import unittest
 
 from insta_reactor.models import Emotion
 from insta_reactor.engine.normalize import (
-    extract_emojis, signals_for_comment,
+    extract_emojis, signals_for_comment, is_trainable_reply,
 )
 
 
@@ -16,6 +16,28 @@ class TestEmojiExtraction(unittest.TestCase):
 
     def test_no_emoji(self):
         self.assertEqual(extract_emojis("just text"), [])
+
+
+class TestIsTrainableReply(unittest.TestCase):
+    def test_bare_single_emoji_is_trainable(self):
+        self.assertTrue(is_trainable_reply("💀"))
+
+    def test_bare_multi_emoji_is_trainable(self):
+        self.assertTrue(is_trainable_reply("💀💀😭"))
+
+    def test_text_plus_emoji_needs_approval(self):
+        self.assertFalse(is_trainable_reply("bro 💀"))
+        self.assertTrue(is_trainable_reply("bro 💀", ["bro 💀"]))
+
+    def test_plain_text_needs_approval(self):
+        self.assertFalse(is_trainable_reply("LMAOO"))
+        self.assertTrue(is_trainable_reply("LMAOO", ["lmaoo"]))  # case-insensitive
+
+    def test_approval_matching_ignores_surrounding_whitespace(self):
+        self.assertTrue(is_trainable_reply("  nah  ", ["nah"]))
+
+    def test_unrelated_approved_phrase_does_not_match(self):
+        self.assertFalse(is_trainable_reply("some other contextual reply", ["nah"]))
 
 
 class TestSlangSignals(unittest.TestCase):

@@ -68,10 +68,12 @@ class TestRunnerEndToEnd(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.queue = os.path.join(self.tmp, "queue.json")
         self.seen = os.path.join(self.tmp, "seen.json")
+        self.log = os.path.join(self.tmp, "interactions.jsonl")
 
     def _runner(self, backend, cfg=None, send=True):
         return Runner(backend, cfg or config(), FlagManager(self.queue),
-                      send=send, seen_store=SeenStore(self.seen))
+                      send=send, seen_store=SeenStore(self.seen),
+                      log_path=self.log)
 
     def test_full_run(self):
         backend = SimulatedBackend(build_fixture())
@@ -221,6 +223,80 @@ class TestRunnerEndToEnd(unittest.TestCase):
         self.assertIsNotNone(r5_sig)
         self.assertTrue(store.is_reacted(r5_sig),
                         "flagged reel r5 should be remembered to avoid re-flagging")
+
+
+class ReactionCapableBackend(SimulatedBackend):
+    """SimulatedBackend variant that can also record/answer send_reaction, to
+    exercise the runner's native-reaction-first branch."""
+
+    def __init__(self, fixtures: dict, reaction_succeeds: bool = True):
+        super().__init__(fixtures)
+        self.reaction_succeeds = reaction_succeeds
+        self.reacted: list[tuple[str, str, str]] = []
+
+    def send_reaction(self, reel, emoji: str) -> bool:
+        if not self.reaction_succeeds:
+            return False
+        self._reacted.add((self._current_chat or "", reel.reel_id))
+        self.reacted.append((self._current_chat or "", reel.reel_id, emoji))
+        return True
+
+
+def _bare_emoji_fixture():
+    # r1's popular-verbatim echo ("LMAOO 💀💀") isn't emoji-only, so use a
+    # profile whose common_replies wins with a bare single emoji instead.
+    return {"chats": {"Feed": {"reels": [
+        {"id": "r1", "comment_count": 240,
+         "comments": ([{"text": "💀", "likes": 1}] * 20)},
+    ]}}}
+
+
+class TestRunnerNativeReaction(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.queue = os.path.join(self.tmp, "queue.json")
+        self.seen = os.path.join(self.tmp, "seen.json")
+        self.log = os.path.join(self.tmp, "interactions.jsonl")
+
+    def _cfg(self, **settings_kwargs):
+        return AppConfig(
+            profile=Profile(emoji_prefs=["💀"], common_replies=["💀"],
+                            reply_style=ReplyStyle.SINGLE),
+            settings=Settings(**settings_kwargs), enabled_chats=["Feed"],
+        )
+
+    def _runner(self, backend, cfg):
+        return Runner(backend, cfg, FlagManager(self.queue), send=True,
+                      seen_store=SeenStore(self.seen), log_path=self.log)
+
+    def test_bare_emoji_prefers_native_reaction(self):
+        backend = ReactionCapableBackend(_bare_emoji_fixture(), reaction_succeeds=True)
+        summary = self._runner(backend, self._cfg()).run()
+        self.assertEqual(len(summary.auto_replied), 1)
+        self.assertEqual(len(backend.reacted), 1, "should use send_reaction")
+        self.assertEqual(len(backend.sent), 0, "send_reply must not also fire")
+
+    def test_falls_back_to_typed_reply_when_reaction_fails(self):
+        backend = ReactionCapableBackend(_bare_emoji_fixture(), reaction_succeeds=False)
+        summary = self._runner(backend, self._cfg()).run()
+        self.assertEqual(len(summary.auto_replied), 1)
+        self.assertEqual(len(backend.sent), 1, "must fall back to send_reply")
+
+    def test_native_reaction_disabled_skips_straight_to_reply(self):
+        backend = ReactionCapableBackend(_bare_emoji_fixture(), reaction_succeeds=True)
+        cfg = self._cfg(native_reaction_enabled=False)
+        summary = self._runner(backend, cfg).run()
+        self.assertEqual(len(summary.auto_replied), 1)
+        self.assertEqual(len(backend.reacted), 0)
+        self.assertEqual(len(backend.sent), 1)
+
+    def test_backend_without_reaction_support_falls_back(self):
+        # Plain SimulatedBackend never overrides send_reaction (base default
+        # returns False) -- must still succeed via the typed-reply fallback.
+        backend = SimulatedBackend(_bare_emoji_fixture())
+        summary = self._runner(backend, self._cfg()).run()
+        self.assertEqual(len(summary.auto_replied), 1)
+        self.assertEqual(len(backend.sent), 1)
 
 
 if __name__ == "__main__":

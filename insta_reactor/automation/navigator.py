@@ -13,6 +13,7 @@ import re
 import time
 
 from ..device.base import Device, UiNode
+from ..engine.normalize import strip_variation
 from . import selectors as S
 from .states import State, INSTAGRAM_PACKAGE, MAX_BACK_TO_INBOX
 
@@ -466,6 +467,36 @@ class Navigator:
         self._pause()
         return True
 
+    def react_to_reel_in_viewer(self, emoji: str) -> bool:
+        """Send a native IG reaction to the reel open in the viewer, via the
+        reply bar's reaction sheet — a real long-press-style reaction, not a
+        typed/quoted reply. Assumes we are in the REEL_VIEWER state.
+
+        The heart is confirmed calibrated (content-desc "❤"); every other
+        emoji is an unverified guess that the picker's tile carries the emoji
+        itself as its desc/text. Returns False (never raises) if the gesture
+        doesn't land, so the caller can fall back to `reply_in_reel_viewer`.
+        """
+        if strip_variation(emoji) in S.HEART_ALIASES:
+            heart = self._find_any(S.REPLY_BAR_HEART_REACTION)
+            if heart:
+                self.d.tap_node(heart)
+                self._pause()
+                return True
+
+        sheet_btn = self._find_any(S.REPLY_BAR_REACTION_SHEET_BUTTON)
+        if not sheet_btn:
+            return False
+        self.d.tap_node(sheet_btn)
+        self._pause(0.5)
+        tile = self._find_any([{"desc": emoji}, {"text": emoji}])
+        if not tile:
+            log.info("reaction sheet: no tile found for %r; falling back to reply", emoji)
+            return False
+        self.d.tap_node(tile)
+        self._pause()
+        return True
+
     # ---- thread scrolling ------------------------------------------------
     def _thread_signature(self) -> tuple:
         """A cheap fingerprint of the visible thread, to detect when a scroll
@@ -610,13 +641,34 @@ class Navigator:
         bottom past the fold left a tall reel's center still in-band — it stayed
         the bottom-most reel and the enumeration re-selected it while the cursor
         blindly advanced, producing two replies to ONE reel (confirmed live).
-        The margin below is sized so any reel that was inside the tappable zone
-        clears in a single swipe. Content scrolls DOWN (toward older) — the safe
-        direction, away from the bottom over-scroll that engages vanish mode."""
+
+        Content scrolls DOWN (toward older) — the safe direction, away from the
+        bottom over-scroll that engages vanish mode.
+
+        Split into capped chunks rather than one big swipe for the full
+        distance: for a `center` sitting well above `zone_bottom` (deep in a
+        long scroll-back), the single-swipe distance used to be clamped by the
+        y >= h*0.10 floor, so one long drag covered the same capped screen
+        distance whether it was asked to move a little or a lot — a real
+        Android drag doesn't reliably fling by an arbitrary requested amount in
+        one gesture, so it could under-register versus the caller's
+        expectation and leave the same reel still in-band (this is what let a
+        continuous walk up the thread silently re-detect one reply many times
+        over — confirmed live). A caller walking the thread step by step
+        depends on this actually clearing the node it asked for, so each chunk
+        is capped and verified via `_thread_signature()`, stopping early once a
+        chunk makes no further progress (real top of thread) instead of
+        trusting one long swipe to have covered the full distance."""
         w, h = self.d.window_size()
-        # move content down until `center` is comfortably past zone_bottom
-        distance = max(int(h * 0.18), (zone_bottom - center) + int(h * 0.18))
-        y_start = max(int(h * 0.10), zone_bottom - distance)
-        # slower swipe (longer duration) to curb fling/momentum overshoot
-        self.d.swipe(w // 2, y_start, w // 2, zone_bottom, 0.40)
-        self._pause(0.6)
+        remaining = max(int(h * 0.18), (zone_bottom - center) + int(h * 0.18))
+        max_chunk = int(h * 0.30)
+        while remaining > 0:
+            chunk = min(remaining, max_chunk)
+            y_start = max(int(h * 0.10), zone_bottom - chunk)
+            before = self._thread_signature()
+            # slower swipe (longer duration) to curb fling/momentum overshoot
+            self.d.swipe(w // 2, y_start, w // 2, zone_bottom, 0.40)
+            self._pause(0.6)
+            remaining -= chunk
+            if self._thread_signature() == before:
+                break   # no more content to reveal — stop early

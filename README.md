@@ -28,6 +28,49 @@ personally reacted. Only you can decide if that's fine for your relationships.
 
 ---
 
+## Browser mode (recommended) — run on your PC, phone stays free
+
+The reactor now drives **Instagram *web*** with Playwright instead of a phone.
+It's much faster than on-device accessibility, keeps your phone free, and lets
+you keep using your PC (the automation runs in its own Chrome profile / window;
+your other tabs and apps are untouched). It's also **AI-native**: an LLM
+synthesises each reaction *intelligently from the crowd's comments*, grounded by
+the deterministic engine's analysis and your personal style.
+
+```bash
+pip install -r requirements.txt
+python -m playwright install chromium        # one-time browser download
+
+# put your OpenRouter key in data/secrets.json (see data/secrets.example.json)
+# then launch the web control-panel:
+python -m insta_reactor browser-ui           # open http://127.0.0.1:8770/
+```
+
+First run: a Chrome window opens — **log into Instagram once** (we never touch
+your password; the session is remembered in `data/browser_profile/`). Then in the
+UI pick your whitelisted chats and hit **Run**. The reactor opens each chat,
+reads each reel's comments, AI-synthesises a reaction, and reacts — then shows:
+
+- ✅ what it **reacted to** (with the reply it sent), and
+- 🙋 a **gallery of thumbnail screenshots** of every reel it *couldn't* react to,
+  each with a plain-language reason — so you see at a glance which reels need you.
+
+Scriptable equivalent (headless-friendly):
+
+```bash
+python -m insta_reactor browser-run --chat "Best Friend" --use-llm --plan-only
+# --plan-only decides + summarises but sends nothing; drop it to send for real.
+# --allow-chat "NAME"  hard-restricts ALL sending to that chat (safety guardrail).
+```
+
+Everything above the device seam (the reaction engine, RAG, correction learning)
+is reused unchanged — browser mode is a new `Backend`, not a rewrite. Reels open
+at a stable `/p/<shortcode>/` URL, so cross-run dedup is now reliable.
+
+The phone/Android path below still works and is unchanged.
+
+---
+
 ## Quick start — run it **now**, no phone, no installs
 
 ```bash

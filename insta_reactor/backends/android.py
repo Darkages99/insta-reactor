@@ -36,6 +36,18 @@ _ZONE_TOP = 0.16
 _ZONE_BOTTOM = 0.82
 _MAX_SWEEP_STEPS = 60   # hard cap on scroll+scan iterations per reel lookup
 _MAX_REELS = 40         # absolute cap on reels handled per thread (safety)
+# Cold-start's scan_organic_reactions walks the WHOLE thread history in one
+# continuous O(n) pass (not the live hot-path's bounded "skip ~3 reels" case
+# that _MAX_SWEEP_STEPS=60 is sized for), so it needs a much bigger step
+# budget or it silently truncates history scans partway up the thread (looks
+# like "stops scrolling"), biasing the derived profile toward only the most
+# recent handful of reactions. Confirmed live: since the walk is now linear
+# rather than the old O(n^2) re-anchor-per-index sweep, a much larger budget
+# here no longer means a quadratic blowup in run time — it was raised from
+# 400 (sized for the old O(n^2) cost) accordingly. This is an offline/manual
+# tool, not latency-sensitive, so give it a big budget instead of touching
+# the live-run constant.
+_COLDSTART_MAX_SWEEP_STEPS = 1500
 
 # Incoming-text detection tuning. A shared reel's own caption/description renders
 # as a plain TextView near the reel and can be hundreds of chars long; a typed DM
@@ -55,6 +67,36 @@ _UI_HINT_STRINGS = {
     "double tap to react",
     "tap to react",
 }
+
+# Cold-start history scan (scan_organic_reactions): a quoted-reply's embedded
+# thumbnail re-renders the SAME reel_share_item_view widget at roughly half the
+# width of a genuine shared reel (confirmed on-device: ~239px quote-preview vs
+# ~478px real share, on a 1272px-wide screen). Width, not side-of-screen, is
+# what tells them apart — a quote-preview is always right-aligned regardless of
+# which reel it quotes.
+_QUOTE_REEL_MAX_WIDTH = 320
+# Thread timestamp dividers grow a longer date prefix the older the message
+# is ("10:30" -> "THU, 6:18 PM" -> "YESTERDAY 10:25 PM" -> "6 JUL, 9:56 PM" ->
+# presumably "6 JUL 2024, 9:56 PM" for messages over a year old), and these
+# TextViews carry no resource-id to filter on (confirmed live — id is always
+# ""), so enumerating every date-prefix format by regex is a losing game
+# (confirmed live: "6 JUL, 9:56 PM" slipped through the weekday/YESTERDAY-only
+# version and got scanned as a reply). Instead use a structural rule: a
+# divider is text ending in a time expression where everything before that
+# time is only uppercase letters/digits/commas/spaces — a real typed message
+# essentially never looks like that, while every IG divider format does.
+_TIME_SUFFIX_RE = re.compile(r"\d{1,2}:\d{2}(?:\s?[AP]M)?$")
+_TIMESTAMP_PREFIX_RE = re.compile(r"^[A-Z0-9,\s]*$")
+
+
+def _is_timestamp_divider(txt: str) -> bool:
+    m = _TIME_SUFFIX_RE.search(txt)
+    if not m:
+        return False
+    return bool(_TIMESTAMP_PREFIX_RE.match(txt[:m.start()]))
+
+
+_SLEEP_MODE_MARKERS = ("sleep mode", "consider closing instagram")
 
 _HANDLE_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._]{0,28}[a-z0-9])?$")
 
@@ -173,6 +215,235 @@ class AndroidBackend(Backend):
                 self._read_reel(node, reel_id)
             k += 1
 
+    def iter_own_recent_messages(self, cap: int = 200) -> list[str]:
+        """Cold-start hook: your own replies to reels in the currently open
+        chat, newest-first. Backed by `scan_organic_reactions` (read-only —
+        scrolls and reads, never taps Send)."""
+        return [r["reply_text"] for r in self.scan_organic_reactions(max_reels=cap)]
+
+    def scan_organic_reactions(self, max_reels: int = 40,
+                                resume_after: dict | None = None,
+                                out_state: dict | None = None,
+                                on_group=None) -> list[dict]:
+        """Walk the open thread from the newest message upward, pairing each
+        received/quoted reel with YOUR reply immediately below it.
+
+        Two on-device reaction shapes both fall out of the same rule (a reel
+        bubble immediately followed by your own outgoing text/emoji, before
+        the next reel):
+          * a quick reaction — a short outgoing emoji directly under a
+            full-width, left-aligned (incoming) reel share, no quote UI.
+          * a full quoted reply — "You replied" + a half-width quote-preview
+            thumbnail (same reel_share_item_view widget, ~half the width of a
+            real share — see _QUOTE_REEL_MAX_WIDTH) + your text/emoji below it.
+
+        A single continuous walk (anchor at the bottom once, then repeatedly
+        emit the current bottom-most in-zone group and scroll it below the
+        fold) — O(n) scroll calls for n groups, not the O(n^2) re-anchor-per-
+        index sweep this used to be (see git history / memory for why that
+        existed: a big scroll_node_below_fold distance for a reel sitting well
+        above zone_bottom used to under-register on a single long swipe and
+        re-land on the same screen, silently duplicating one reply many times
+        over). That root cause is now fixed at the source — see
+        `Navigator.scroll_node_below_fold`, which splits into capped,
+        signature-verified chunks instead of trusting one long swipe — so the
+        continuous walk this docstring used to warn against is safe again.
+        As defense in depth, a stall guard (`last_bounds`) still bails out if
+        the "newest" in-zone group's bounds are ever bit-for-bit identical to
+        the previous step's, rather than looping forever.
+        Read-only: only scrolls and reads text; never taps a reel open or
+        sends anything.
+        Returns newest-first `{"reply_text": ..., "kind": "full"|"quote"}`.
+
+        `resume_after`, if given, is the {"kind", "reply_text"} of the oldest
+        group a PREVIOUS call reached (see onboarding/coldstart_state.py).
+        Groups are walked and skipped (not counted toward max_reels, not
+        returned) until that exact one is seen again, then only groups OLDER
+        than it are collected — so re-running on the same chat resumes
+        instead of re-emitting duplicates. There's no stable reel id to match
+        on across process runs, so this is a best-effort content+order
+        anchor; harmless if it's ever a little off, since unanswered
+        (reply_text=None) groups never get collected either way.
+
+        `out_state`, if given, is filled in-place with `next_resume_after`
+        (the oldest group actually reached this call) and `reached_watermark`.
+        Kept for callers that only care about the final tally.
+
+        `on_group`, if given, is called as `on_group(found, is_new)` right
+        after EVERY group is located — before this scan has any chance to be
+        interrupted. `is_new` is True once we're past the old resume marker
+        (i.e. this group would count toward the returned list). This is what
+        makes the scan resumable mid-run and not just at a clean exit: a
+        caller can persist the resume marker (and any new pair) after each
+        single group instead of waiting for the whole call to return, so a
+        kill/interrupt loses at most the one group in flight, never the
+        whole run. Cold-start scans on a live phone happen in short bursts,
+        not one sitting, so this matters more here than elsewhere in the
+        file."""
+        out: list[dict] = []
+        state = {"watermark_hit": resume_after is None, "last_seen": None}
+
+        def _process(newest: UiNode, reels: list[UiNode]) -> bool:
+            """Emit `newest`'s group; return True once max_reels is reached."""
+            found = self._emit_reel_group(newest, reels)
+            state["last_seen"] = found
+            is_new = state["watermark_hit"]
+            if not state["watermark_hit"] and \
+                    (found.get("kind"), found.get("reply_text")) == \
+                    (resume_after.get("kind"), resume_after.get("reply_text")):
+                state["watermark_hit"] = True
+            if on_group is not None:
+                on_group(found, is_new)
+            if is_new and found["reply_text"]:
+                out.append(found)
+            return len(out) >= max_reels
+
+        if self._anchor_chat_bottom():
+            w, h = self.d.window_size()
+            zt, zb = int(h * _ZONE_TOP), int(h * _ZONE_BOTTOM)
+            last_bounds: tuple | None = None
+            for _ in range(_COLDSTART_MAX_SWEEP_STEPS):
+                reels = self._all_reel_nodes_in_zone(zt, zb)
+                if reels:
+                    newest = reels[-1]        # largest y => closest to bottom
+                    if newest.bounds == last_bounds:
+                        break   # stall guard: scroll made no visible progress
+                    last_bounds = newest.bounds
+                    if _process(newest, reels):
+                        break
+                    self.nav.scroll_node_below_fold(newest.center[1], zb)
+                    continue
+                if not self.nav.thread_scroll_up(amount=0.3):
+                    # genuinely at the top: squeeze out any remaining groups
+                    # still sitting in the zone instead of giving up.
+                    reels = self._all_reel_nodes_in_zone(zt, zb)
+                    for newest in reversed(reels):
+                        if newest.bounds == last_bounds:
+                            continue
+                        last_bounds = newest.bounds
+                        if _process(newest, reels):
+                            break
+                    break
+
+        if out_state is not None:
+            out_state["next_resume_after"] = state["last_seen"]
+            out_state["reached_watermark"] = state["watermark_hit"]
+        return out
+
+    def _emit_reel_group(self, newest: UiNode, reels: list[UiNode]) -> dict:
+        """Classify `newest` (the current bottom-most in-zone reel) and pair
+        it with your reply below it, if any. Shared by `scan_organic_reactions`'s
+        walk for both the in-zone and top-of-thread tail cases."""
+        w, h = self.d.window_size()
+        zt = int(h * _ZONE_TOP)
+        width = newest.bounds[2] - newest.bounds[0]
+        is_quote = width < _QUOTE_REEL_MAX_WIDTH
+        incoming = newest.center[0] < w / 2
+        if not is_quote and not incoming:
+            # a full-width reel YOU sent — not a reaction target.
+            return {"reply_text": None, "kind": "sent"}
+        # Bottom bound for the reply-text search: the top of the next
+        # newer reel if there is one (so we don't leak into that group's
+        # reply), else the full window height. NOT zb — zb is a
+        # tap-safety band for reels that must be safely tappable to
+        # open, but this search only reads text, never taps it, and the
+        # newest group's reply can legitimately sit just below zb, right
+        # above the composer (confirmed live: a reaction emoji at
+        # y=2287 on a 2772-tall screen with zb=2273 was being dropped).
+        next_top = min((n.bounds[1] for n in reels
+                        if n.bounds[1] > newest.bounds[3]),
+                       default=h)
+        reply = self._first_outgoing_text_below(newest, zt, next_top, w)
+        return {"reply_text": reply, "kind": "quote" if is_quote else "full"}
+
+    def _all_reel_nodes_in_zone(self, zt: int, zb: int) -> list[UiNode]:
+        """Every reel_share_item_view (either side, any width) whose tap
+        target is safely on-screen, top-first. Mirrors `_loosely_visible_reels`
+        (bounds-top for the top edge, center for the bottom edge) rather than
+        a plain center-in-range test — a center-only test lets a node whose
+        top has already scrolled above zt keep registering as "in zone" after
+        `scroll_node_below_fold`, so the sweep re-selects the same group on
+        the next step instead of advancing (confirmed live: produced the same
+        reply 6x in a row instead of walking to older groups)."""
+        out = [n for n in self.d.find_all(
+                    resource_id="com.instagram.android:id/reel_share_item_view")
+               if n.bounds[1] >= zt and n.center[1] <= zb]
+        return sorted(out, key=lambda n: n.bounds[1])
+
+    def _first_outgoing_text_below(self, reel_node: UiNode, zt: int, zb: int,
+                                    w: int) -> str | None:
+        """The nearest outgoing (right-aligned) real message text below
+        `reel_node`'s bottom edge and within the tappable band — your reaction
+        to that reel, if any. Filters out the same non-message chrome the
+        preceding/following-text scans do, plus the "You replied" label and
+        thread timestamp dividers, which are unique to history scanning.
+
+        Also rejects text sitting on a reposted tweet/post card: those cards
+        reuse the SAME reel_share_item_view id as a genuine video Reel (no
+        resource-id or content-description tells them apart — confirmed live,
+        every node here has an empty id), and a card's own caption ("thephil
+        clifton Ancient Greeks?") can land right of center and get mistaken
+        for your reply. Visually, though, your real reply always sits on a
+        solid, vividly-colored chat bubble; a card caption sits on the card's
+        own dark/grey strip. Bubble fill color IS available (unlike id/desc),
+        via a screenshot sampled at each candidate's bounds — see
+        `_looks_like_reply_bubble`."""
+        reel_bottom = reel_node.bounds[3]
+        attribution = self._attribution_labels()
+        screenshot = None
+        best_text, best_top = None, 10 ** 9
+        for tv in self.d.find_all(className="android.widget.TextView"):
+            if tv.resource_id in _NON_MESSAGE_TEXT_IDS:
+                continue
+            txt = (tv.text or "").strip()
+            if not txt or txt in attribution or _is_ui_chrome_or_label(txt):
+                continue
+            low = txt.lower()
+            if low == "you replied" or _is_timestamp_divider(txt):
+                continue
+            if any(marker in low for marker in _SLEEP_MODE_MARKERS):
+                continue
+            if len(txt) > _MAX_TEXT_MSG_LEN:
+                continue
+            l, t, r, b = tv.bounds
+            if t < reel_bottom or t > zb:
+                continue
+            cx = (l + r) // 2
+            if cx < w / 2:
+                continue          # incoming — not your reaction
+            if t >= best_top:
+                continue
+            if screenshot is None:
+                screenshot = self.d.screenshot()
+            if not self._looks_like_reply_bubble(screenshot, tv.bounds):
+                continue
+            best_top, best_text = t, txt
+        return best_text
+
+    @staticmethod
+    def _looks_like_reply_bubble(screenshot, bounds: tuple[int, int, int, int]) -> bool:
+        """True if `bounds` sits on a vividly-colored chat-bubble fill rather
+        than a dark/grey card strip. Samples a small grid inside the text
+        bounds and takes the most saturated sample as a proxy for the
+        bubble's fill (text glyphs and card chrome are both close to
+        black/white/grey — low saturation — so the bubble fill, if present,
+        stands out as the max). Threshold (green channel dominant) matches
+        this app's outgoing-message bubble color, confirmed live via pixel
+        sampling: real bubble ~(134, 213, 98) vs. card caption ~(30, 60, 80)."""
+        l, t, r, b = bounds
+        xs = range(l + 2, max(l + 3, r - 1), max(1, (r - l) // 6))
+        ys = range(t + 2, max(t + 3, b - 1), max(1, (b - t) // 4))
+        best_sample, best_sat = (0, 0, 0), -1
+        for x in xs:
+            for y in ys:
+                if 0 <= x < screenshot.width and 0 <= y < screenshot.height:
+                    px = screenshot.getpixel((x, y))[:3]
+                    sat = max(px) - min(px)
+                    if sat > best_sat:
+                        best_sat, best_sample = sat, px
+        r_, g_, b_ = best_sample
+        return g_ > 150 and g_ - r_ > 30 and g_ - b_ > 30
+
     def find_unreacted_reels(self) -> list[ReelHandle]:
         """Interface compatibility only — the runner uses iter_reels() for the
         real device. Returns reels currently fully visible in the thread."""
@@ -223,6 +494,25 @@ class AndroidBackend(Backend):
             return False
         ok = self.nav.reply_in_reel_viewer(text)
         # comments/viewer -> thread, whatever happened, so the sweep can go on.
+        self.nav.back_to_chat()
+        return ok
+
+    def send_reaction(self, reel: ReelHandle, emoji: str) -> bool:
+        """Native long-press-style reaction via the reel viewer's reaction
+        sheet. Same navigation shape as `send_reply`; only the final in-viewer
+        action differs. Returns False (never raises) on any failure so the
+        runner can fall back to `send_reply`."""
+        node = reel.locator if isinstance(reel.locator, UiNode) else None
+        if node is None:
+            return False
+        if self.nav.detect_state() != State.CHAT and not self.nav.back_to_chat():
+            return False
+        target = self._relocate_reel_node(node) or node
+        self.d.tap_node(target)
+        if not self.nav.wait_for_state(State.REEL_VIEWER):
+            self.nav.back_to_chat()
+            return False
+        ok = self.nav.react_to_reel_in_viewer(emoji)
         self.nav.back_to_chat()
         return ok
 
