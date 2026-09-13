@@ -244,6 +244,11 @@ class FlagKind:
     # A plain text message in the chat (not a reel). The bot only reacts to
     # reels, so any incoming text — even a single one — is surfaced to you.
     INCOMING_TEXT = "incoming_text"
+    # llm_mode="always": the LLM declined to author a reply (should_reply=false)
+    # or failed. We flag for a human rather than fall back to the context-blind
+    # deterministic reaction — that fallback is how a hype 'lmao'/🔥 lands on a
+    # somber or wholesome reel.
+    LLM_DECLINED = "llm_declined"
 
 
 @dataclass

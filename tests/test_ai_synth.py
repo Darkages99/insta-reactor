@@ -62,6 +62,20 @@ class SynthesiseTests(unittest.TestCase):
         self.assertIn("DEAD", user_msg)          # the crowd-analysis grounding
         self.assertIn("CROWD'S COMMENTS", user_msg)
 
+    def test_always_mode_decline_flags_not_deterministic_fallback(self):
+        # If the LLM declines (should_reply=false) in always-mode, we must FLAG
+        # for a human — NOT fall back to the context-blind deterministic reply.
+        # That fallback is how a hype 'lmao'/🔥 lands on a somber/wholesome reel.
+        r = _runner(mode="always", reply="😭")
+        r.llm = FakeLLM("😭", should_reply=False)
+        dec = Decision(action=Action.AUTO_REPLY, reply_text="lmao",
+                       reply_source="emotion", winning_emotion="DEAD",
+                       confidence=0.7)
+        out = r._maybe_llm(_ctx(), dec)
+        self.assertEqual(out.action, Action.FLAG)
+        self.assertEqual(out.flag.kind, FlagKind.LLM_DECLINED)
+        self.assertNotEqual(out.reply_text, "lmao")
+
     def test_assist_mode_does_not_synthesise_confident_reply(self):
         # In 'assist' mode a confident auto-reply is left untouched.
         r = _runner(mode="assist")

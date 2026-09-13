@@ -95,8 +95,13 @@ def build_prompt(ctx, profile: Profile, rag_examples: str,
         "Respond with ONLY a compact JSON object:\n"
         '{"reply": "<the reaction>", "confidence": <0..1>, '
         '"should_reply": <true|false>}\n'
-        "Set should_reply=false (and confidence low) if the reel needs a real "
-        "human reply (a question, something personal) or no short reaction fits."
+        "A sad, emotional, wholesome, heartfelt, or serious reel IS still "
+        "reactable: reply with a short EMPATHETIC reaction (e.g. 😭, 🥹, ❤️, 🙏) "
+        "— never a hype or laughing one. Whenever a fitting short reaction "
+        "exists, set should_reply=true. Only set should_reply=false when the "
+        "reel truly needs a typed-out human reply — it asks a direct question "
+        "you'd have to answer in words, or is a personal message aimed at you "
+        "— or when genuinely no short reaction could fit."
     )
     comments = _redacted_comments(getattr(ctx, "comments", None) or [])
     caption = _redact(getattr(ctx, "caption", "") or "")

@@ -153,7 +153,23 @@ class Runner:
             log.exception("LLM reply failed for reel %s", decision.reel_id)
             return decision
         if sugg is None:
-            return decision   # rescue: keep the flag; synth: keep deterministic
+            if is_synth:
+                # always-mode: the LLM is the author. If it declined
+                # (should_reply=false) or failed, do NOT fall back to the
+                # context-blind deterministic reply — that's exactly how a hype
+                # 'lmao'/🔥 lands on a somber or wholesome reel. Hand to a human.
+                return Decision(
+                    action=Action.FLAG,
+                    flag=Flag(FlagKind.LLM_DECLINED,
+                              "The reel didn't fit a safe short reaction "
+                              "(model declined). Read and reply manually."),
+                    winning_emotion=decision.winning_emotion,
+                    confidence=decision.confidence,
+                    breakdown=decision.breakdown,
+                    chat_name=decision.chat_name,
+                    reel_id=decision.reel_id,
+                )
+            return decision   # rescue: keep the original flag
         log.info("LLM %s reel %s -> %r (conf %.2f)",
                  "rescued" if is_rescue else "synthesised",
                  decision.reel_id, sugg.reply_text, sugg.confidence)

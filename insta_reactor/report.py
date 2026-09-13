@@ -13,6 +13,7 @@ FLAG_LABEL = {
     FlagKind.LOW_CONFIDENCE: "low confidence",
     FlagKind.NAV_FAILED: "navigation failed",
     FlagKind.INCOMING_TEXT: "text message (needs a human reply)",
+    FlagKind.LLM_DECLINED: "no safe short reaction fit (needs a human)",
 }
 
 

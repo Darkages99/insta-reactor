@@ -52,6 +52,7 @@ _FLAG_LABEL = {
     "low_confidence": "Not confident enough to react",
     "nav_failed": "Something went wrong opening/sending",
     "incoming_text": "A text message you should answer yourself",
+    "llm_declined": "No safe short reaction fit — reply yourself",
 }
 
 
