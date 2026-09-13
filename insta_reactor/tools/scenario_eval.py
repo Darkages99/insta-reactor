@@ -30,14 +30,19 @@ from ..runner import Runner
 
 
 # --- tone vocabularies the grader keys off ---------------------------------
-# Tokens that read as hype / comedy. On a somber/wholesome/educational reel any
-# of these is a tone mismatch (the exact failure the LLM prompt warns against).
-HYPE_LAUGH = [
-    "🔥", "💀", "😂", "🤣", "😹", "🥶", "⚰️", "☠️",
+# LAUGH: reads as laughing-at. Wrong on anything sad, wholesome, OR educational
+# (you don't laugh at a funeral, a baby's first steps, or a physics explainer).
+LAUGH = [
+    "💀", "😂", "🤣", "😹", "☠️", "⚰️",
     "lmao", "lmfao", "lmaoo", "lmaooo", "haha", "hahaha", "lol", "lolol",
-    "goes crazy", "goes hard", "cooked", "hilarious", "dead ", "im dead",
-    "sheesh", "bruh moment", "ratio",
+    "hilarious", "dead ", "im dead", "bruh moment", "ratio",
 ]
+# HYPE: reads as flex/impressive-hype. Wrong on somber/wholesome (🔥 on a death
+# or a baby is tone-deaf), but ACCEPTABLE on educational ("🔥" = "cool fact").
+HYPE = ["🔥", "🥶", "goes crazy", "goes hard", "cooked", "sheesh", "banger",
+        "this slaps"]
+# Back-compat alias for any external reference.
+HYPE_LAUGH = LAUGH + HYPE
 # Warmth tokens — used only as a soft positive signal for wholesome scenarios.
 WARMTH = ["🥹", "😭", "❤️", "🥺", "😍", "🫶", "🙏", "beautiful", "sweet",
           "wholesome", "precious", "adorable", "love this", "so cute"]
@@ -217,11 +222,14 @@ def _grade(sc: Scenario, decision) -> Result:
     if not reply.strip():
         return Result(sc.name, sc.tone, action, reply, source, False, "empty reply")
 
+    # somber/wholesome: neither laughing NOR flex-hype fits. educational: no
+    # laughing (odd on an explainer), but 🔥 = "cool fact" is fine.
+    forbidden = LAUGH if sc.tone == "educational" else (LAUGH + HYPE)
     if sc.tone in ("somber", "wholesome", "educational"):
-        bad = _has_any(reply, HYPE_LAUGH)
+        bad = _has_any(reply, forbidden)
         if bad:
             return Result(sc.name, sc.tone, action, reply, source, False,
-                          f"tone mismatch: hype/laugh token {bad!r} on a {sc.tone} reel")
+                          f"tone mismatch: {bad!r} on a {sc.tone} reel")
     return Result(sc.name, sc.tone, action, reply, source, True, "fits tone")
 
 
