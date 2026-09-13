@@ -21,6 +21,7 @@ from ..models import (
     ScoreBreakdown,
 )
 from . import scoring
+from . import safety
 from .reply_select import select_reply
 
 
@@ -65,6 +66,16 @@ def decide_reaction(ctx: ReelContext, profile: Profile, settings: Settings,
         return _flag(
             ctx, FlagKind.UNABLE_TO_READ,
             "Unable to read comments. Read and reply manually.",
+        )
+
+    # --- Safety gate: never auto-react to cruel/bigoted/harassing reels -----
+    # Deterministic (does not trust the LLM, which will happily "lmao" a bullying
+    # clip). Fires regardless of comment count; a human decides these.
+    reason = safety.harmful_reason(getattr(ctx, "caption", "") or "", ctx.comments)
+    if reason:
+        return _flag(
+            ctx, FlagKind.SENSITIVE_CONTENT,
+            f"Reel looks sensitive ({reason}). Read and reply manually.",
         )
 
     # --- Rule 2: minimum comment threshold --------------------------------

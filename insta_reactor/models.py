@@ -137,6 +137,10 @@ class Settings:
     llm_max_tokens: int = 120
     llm_max_reply_len: int = 40       # reject model replies longer than this
     llm_min_confidence: float = 0.55  # below this, keep the human flag
+    # Reaction sampling temperature. Kept moderate: high temps make the model
+    # occasionally pick an off-tone reaction (a stray "lmao" on a wholesome/
+    # somber reel); cross-reel variety is added separately by diversify_reply.
+    llm_temperature: float = 0.5
     rag_top_k: int = 5                # past examples fed to the LLM as few-shot
     log_interactions: bool = True     # append decisions to the interaction log
     log_raw_text: bool = False        # also store raw comment text (debug/opt-in)
@@ -249,6 +253,10 @@ class FlagKind:
     # deterministic reaction — that fallback is how a hype 'lmao'/🔥 lands on a
     # somber or wholesome reel.
     LLM_DECLINED = "llm_declined"
+    # Reel looks cruel/bullying/bigoted/harassing (engine/safety.py). We never
+    # auto-react to it — always a human's call — regardless of what the crowd or
+    # the LLM would say.
+    SENSITIVE_CONTENT = "sensitive_content"
 
 
 @dataclass

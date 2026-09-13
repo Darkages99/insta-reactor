@@ -53,6 +53,7 @@ _FLAG_LABEL = {
     "nav_failed": "Something went wrong opening/sending",
     "incoming_text": "A text message you should answer yourself",
     "llm_declined": "No safe short reaction fit — reply yourself",
+    "sensitive_content": "Looks sensitive/harmful — reply yourself",
 }
 
 

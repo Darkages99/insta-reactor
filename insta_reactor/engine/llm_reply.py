@@ -92,6 +92,10 @@ def build_prompt(ctx, profile: Profile, rag_examples: str,
         "flex/impressive/funny clip, but is WRONG for something informative, "
         "educational, wholesome, serious, or sad — react to those in a way that "
         "actually fits.\n\n"
+        "SAFETY: if the reel is cruel, bullying, harassing, hateful, bigoted, "
+        "demeaning, or mocks/attacks a person or group — even if the crowd is "
+        "laughing or hyping it — do NOT join in. Never endorse or laugh at it. "
+        "Set should_reply=false so a human handles it.\n\n"
         "Respond with ONLY a compact JSON object:\n"
         '{"reply": "<the reaction>", "confidence": <0..1>, '
         '"should_reply": <true|false>}\n'
@@ -173,7 +177,7 @@ def suggest_reply(ctx, profile: Profile, settings: Settings,
     system, user = build_prompt(ctx, profile, rag_examples, grounding)
     try:
         raw = llm.complete(system, user,
-                           temperature=0.7,
+                           temperature=getattr(settings, "llm_temperature", 0.5),
                            max_tokens=getattr(settings, "llm_max_tokens", 120))
     except Exception:
         log.exception("llm.complete raised")

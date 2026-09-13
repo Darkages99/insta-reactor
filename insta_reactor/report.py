@@ -14,6 +14,7 @@ FLAG_LABEL = {
     FlagKind.NAV_FAILED: "navigation failed",
     FlagKind.INCOMING_TEXT: "text message (needs a human reply)",
     FlagKind.LLM_DECLINED: "no safe short reaction fit (needs a human)",
+    FlagKind.SENSITIVE_CONTENT: "sensitive content (needs a human)",
 }
 
 
