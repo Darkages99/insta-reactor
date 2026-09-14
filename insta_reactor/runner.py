@@ -14,6 +14,7 @@ import uuid
 from .backends.base import Backend
 from .config import AppConfig
 from .engine.reaction import decide_reaction
+from .engine import safety
 from .engine.reply_select import diversify_reply
 from .engine.classifier import build_model
 from .engine.llm_reply import suggest_reply
@@ -152,6 +153,18 @@ class Runner:
         except Exception:
             log.exception("LLM reply failed for reel %s", decision.reel_id)
             return decision
+        # Deterministic tone net: even a parsed, in-style reply can be tone-deaf
+        # (a small model still "lmao"s a reunion or an explainer sometimes). If
+        # the reply laughs at / hypes clearly heartfelt or educational content,
+        # don't send it — treat it exactly like a decline and hand to a human.
+        if sugg is not None:
+            clash = safety.tone_conflict(
+                getattr(ctx, "caption", "") or "", getattr(ctx, "comments", None),
+                sugg.reply_text)
+            if clash:
+                log.info("tone guard rejected %r for reel %s (%s)",
+                         sugg.reply_text, decision.reel_id, clash)
+                sugg = None
         if sugg is None:
             if is_synth:
                 # always-mode: the LLM is the author. If it declined
