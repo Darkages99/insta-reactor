@@ -202,6 +202,68 @@ SCENARIOS: list[Scenario] = [
              _c("this goes crazy", "🔥🔥", "insane", "how is this real", "W")
              + _pad(["🔥", "goes hard", "insane", "W", "nah crazy"]),
              note="no caption; infer hype from the crowd"),
+
+    # --- wider coverage sweep (2026-09-14): more everyday reel types ----------
+    Scenario("sarcasm_roast", "funny",
+             "my roommate tried to cook rice for the first time 💀",
+             _c("nooo not the rice", "LMAOO how", "he really tried", "😭😭", "ratio")
+             + _pad(["lmao", "💀", "how", "im crying", "nooo"])),
+    Scenario("gaming_ragequit", "funny",
+             "lost my ranked game and this happened",
+             _c("the controller throw 😭", "LMAOOO", "not the rage quit",
+                "he was NOT okay", "bro snapped")
+             + _pad(["lmao", "💀", "he snapped", "😂", "not this"])),
+    Scenario("cooking_win", "hype",
+             "finally nailed the soufflé after 6 tries",
+             _c("it actually rose!!", "chef status", "🔥🔥", "teach me",
+                "so proud of this")
+             + _pad(["🔥", "goes hard", "insane", "W", "impressive"])),
+    Scenario("achievement_grad", "hype",
+             "walked the stage today. 4 years of grinding 🎓",
+             _c("LETS GOOO", "so proud of you", "🔥🔥🔥", "well deserved", "W")
+             + _pad(["🔥", "W", "proud", "deserved", "letsgo"])),
+    Scenario("political_opinion_mild", "educational",
+             "why remote work is probably here to stay — a quick breakdown",
+             _c("good breakdown", "never thought of it that way", "TIL",
+                "well argued", "makes sense")
+             + _pad(["interesting", "TIL", "well explained", "makes sense",
+                     "👏"])),
+    Scenario("spoiler_sports", "hype",
+             "HE JUST BROKE THE WORLD RECORD",
+             _c("NO WAY", "🔥🔥🔥", "insane run", "goes crazy", "history made")
+             + _pad(["🔥", "insane", "goes hard", "W", "history"])),
+    Scenario("motivational_quote", "wholesome",
+             "\"the comeback is always stronger than the setback\"",
+             _c("needed this today", "🥹", "saving this", "so true", "thank you")
+             + _pad(["🥹", "needed this", "thank you", "saving this", "❤️"])),
+    Scenario("exam_celebration", "hype",
+             "got into my dream university!! 4 years of work paying off",
+             _c("LETS GOOO", "so proud", "🔥🔥", "congrats!!", "well deserved")
+             + _pad(["🔥", "W", "proud", "congrats", "deserved"])),
+    Scenario("animal_rescue", "wholesome",
+             "rescued this guy from the highway. he's safe now 🥹",
+             _c("thank you for saving him", "🥹🥹", "he's so precious",
+                "crying at this", "good boy")
+             + _pad(["🥹", "precious", "good boy", "thank you", "❤️"])),
+    Scenario("ranking_sports_teams", "hype",
+             "ranking every team worst to best going into the playoffs",
+             _c("no way you put them last", "🔥 hot takes", "this ages badly",
+                "controversial but ok", "W list")
+             + _pad(["🔥", "W", "hot take", "insane", "goes hard"]),
+             note="safety false-positive check: 'worst to best' near TEAMS, not "
+                  "a group/people — must NOT trip the bigotry pattern"),
+    Scenario("prank_mild", "funny",
+             "told my sister the wifi was down, filmed the reaction 😂",
+             _c("her face 😭", "not the panic", "LMAOO gotcha", "she's gonna kill you",
+                "worth it")
+             + _pad(["lmao", "😂", "gotcha", "her face", "im dead"]),
+             note="harmless prank, no cruelty markers — contrast with 'bullying'; "
+                  "must NOT trip the safety gate"),
+    Scenario("breakup_vent", "needs_human",
+             "3 years and he did this to me. i don't even know what to feel",
+             _c("i'm so sorry", "sending love", "here if you need to talk",
+                "you deserve better", "call me")
+             + _pad(["sending love", "here for you", "🙏", "so sorry", "❤️"])),
 ]
 
 

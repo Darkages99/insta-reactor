@@ -80,7 +80,8 @@ class BrowserBackend(Backend):
                  send_whitelist: set[str] | None = None,
                  target_direction: str = "incoming",
                  self_username: str = "",
-                 thumbs_dir: str = os.path.join("data", "thumbs")):
+                 thumbs_dir: str = os.path.join("data", "thumbs"),
+                 preload_min_reels: int = 0):
         self.config = config
         self.driver = driver or BrowserDriver(
             headless=getattr(config.settings, "browser_headless", False))
@@ -94,6 +95,11 @@ class BrowserBackend(Backend):
         self.self_username = self_username
         self.thumbs_dir = thumbs_dir
         self._chat = ""
+        # >0 only for bulk-eval runs (browser-run --preload N): scroll the thread
+        # upward after opening it to lazy-load older reels before enumerating, so
+        # a wide quality sweep isn't limited to whatever's already rendered.
+        # Normal/production runs leave this 0 — no extra scrolling, no extra risk.
+        self.preload_min_reels = preload_min_reels
 
     # ---- lifecycle ------------------------------------------------------
     def prepare(self) -> None:
@@ -229,13 +235,26 @@ class BrowserBackend(Backend):
         return "/direct/t/" in (self.page.url or "")
 
     def open_chat(self, chat_name: str) -> bool:
+        # A cold session (first navigation right after prepare()) sometimes
+        # renders the inbox row list a beat late — the list/search checks below
+        # both see an empty DOM and correctly report "not found", but it's really
+        # just not painted yet. Retry the whole lookup a couple of times with a
+        # longer settle wait before concluding the chat truly doesn't exist.
+        for attempt in range(3):
+            if self._open_chat_once(chat_name, extra_wait=attempt * 1500):
+                return True
+        log.warning("chat %r not found after retries (inbox list + search)",
+                    chat_name)
+        return False
+
+    def _open_chat_once(self, chat_name: str, extra_wait: int = 0) -> bool:
         page = self.page
         try:
             page.goto("https://www.instagram.com/direct/inbox/",
                       wait_until="domcontentloaded")
         except Exception:
             pass
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(1500 + extra_wait)
         self._dismiss_overlays()
         # Primary: click the thread row straight from the inbox list. Robust to
         # the search box not filtering under automation and to no-avatar chats.
@@ -254,10 +273,9 @@ class BrowserBackend(Backend):
                     self._chat = chat_name
                     self._scroll_thread_to_bottom()
                     return True
-            log.warning("chat %r not found (inbox list + search)", chat_name)
             return False
         except Exception:
-            log.exception("open_chat failed for %r", chat_name)
+            log.exception("_open_chat_once failed for %r", chat_name)
             return False
 
     def _open_from_inbox_list(self, chat_name: str) -> bool:
@@ -292,6 +310,63 @@ class BrowserBackend(Backend):
             self.page.wait_for_timeout(400)
         except Exception:
             pass
+        if self.preload_min_reels > 0:
+            self._load_history(self.preload_min_reels)
+
+    # JS: find the actual scrollable ancestor of a reel/message bubble (the
+    # virtualized message list) and move ITS scrollTop, not the outer page.
+    # Coordinate-based mouse-wheel scrolling is fragile here — the thread's
+    # scroll container isn't reliably under a guessed (x, y) point across
+    # layouts — so we walk up from a real message node to the element whose
+    # scrollHeight exceeds its clientHeight and scroll that directly.
+    _SCROLL_UP_JS = """
+    (step) => {
+      let node = document.querySelector('[aria-label="Clip"]')
+              || document.querySelector('div[role="row"]')
+              || document.querySelector('div[role="main"]');
+      let el = node;
+      while (el) {
+        if (el.scrollHeight > el.clientHeight + 40) {
+          const before = el.scrollTop;
+          el.scrollTop = Math.max(0, el.scrollTop - step);
+          return {moved: el.scrollTop !== before, top: el.scrollTop};
+        }
+        el = el.parentElement;
+      }
+      return {moved: false, top: -1};
+    }
+    """
+
+    def _load_history(self, min_reels: int, max_attempts: int = 20) -> None:
+        """Scroll the open thread upward to lazy-load older messages until at
+        least `min_reels` reel bubbles are present in the DOM (stops early if
+        scrolling stalls — reached the top of the conversation, or no
+        scrollable container was found). Only used for bulk-eval sweeps
+        (browser-run --preload N); never raises."""
+        last_count, stall = -1, 0
+        for _ in range(max_attempts):
+            try:
+                count = len(self._reel_descriptors())
+            except Exception:
+                return
+            if count >= min_reels:
+                return
+            if count == last_count:
+                stall += 1
+                if stall >= 3:
+                    return   # no more history to load
+            else:
+                stall = 0
+            last_count = count
+            try:
+                result = self.page.evaluate(self._SCROLL_UP_JS, 2200)
+                if not result or not result.get("moved"):
+                    stall += 1
+                    if stall >= 3:
+                        return
+                self.page.wait_for_timeout(900)
+            except Exception:
+                return
 
     # ---- reel enumeration ----------------------------------------------
     def _reel_descriptors(self) -> list[dict]:

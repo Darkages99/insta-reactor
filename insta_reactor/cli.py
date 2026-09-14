@@ -383,6 +383,8 @@ def cmd_browser_run(args) -> int:
         cfg.settings.llm_mode = "always"       # AI-native: synthesise every reply
     if args.headless:
         cfg.settings.browser_headless = True
+    if args.max_new_reels:
+        cfg.settings.max_new_reels = args.max_new_reels
 
     if args.send_anywhere:
         whitelist = None
@@ -392,7 +394,8 @@ def cmd_browser_run(args) -> int:
         whitelist = set(chats)                 # default: only the chats we visit
 
     backend = BrowserBackend(cfg, send_whitelist=whitelist,
-                             target_direction=args.target)
+                             target_direction=args.target,
+                             preload_min_reels=args.preload)
     runner = Runner(backend, cfg, FlagManager(args.queue),
                     send=not args.plan_only, seen_store=SeenStore(args.seen))
     try:
@@ -503,6 +506,12 @@ def build_parser() -> argparse.ArgumentParser:
                     help="AI-native: LLM synthesises every reply (needs a key)")
     sp.add_argument("--headless", action="store_true",
                     help="run the browser without a visible window")
+    sp.add_argument("--max-new-reels", type=int, default=0,
+                    help="override how many of the newest reels to process in "
+                         "this run (bulk quality-eval sweeps; default = config)")
+    sp.add_argument("--preload", type=int, default=0,
+                    help="scroll the thread to lazy-load at least N reels before "
+                         "processing (bulk quality-eval sweeps; default = off)")
     sp.add_argument("--verbose", action="store_true")
     sp.add_argument("--json", action="store_true")
     sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))

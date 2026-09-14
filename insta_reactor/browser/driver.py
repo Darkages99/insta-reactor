@@ -53,7 +53,17 @@ class BrowserDriver:
 
     def goto_inbox(self) -> None:
         self.page.goto(INBOX_URL, wait_until="domcontentloaded")
-        self.page.wait_for_timeout(2500)
+        # IG serves a shimmer/skeleton shell immediately, then hydrates the real
+        # UI (search box, thread rows) a variable amount later — a fixed short
+        # sleep flakes under load (multiple chromium instances, slow network).
+        # Wait for a real post-hydration signal instead: either the search box
+        # (logged in) or the login form (logged out) — whichever shows up first.
+        try:
+            self.page.wait_for_selector(
+                'input[placeholder="Search"], input[name="password"]',
+                timeout=15000)
+        except Exception:
+            pass   # fall through; is_logged_in() will just report False
 
     def is_logged_in(self) -> bool:
         """True if we're on the DM inbox (not bounced to a login/landing page)."""
@@ -68,9 +78,18 @@ class BrowserDriver:
 
     def ensure_logged_in(self) -> bool:
         """Navigate to the inbox and report whether we're authenticated. Does NOT
-        attempt to log in — that's the human's job (we never touch a password)."""
-        self.goto_inbox()
-        return self.is_logged_in()
+        attempt to log in — that's the human's job (we never touch a password).
+
+        Retries a couple of times: right after a fresh persistent-context launch
+        the very first navigation can land mid-redirect (a real logged-in profile
+        briefly showing a loading/landing URL before settling on the inbox), which
+        would otherwise be misread as logged-out."""
+        for attempt in range(3):
+            self.goto_inbox()
+            if self.is_logged_in():
+                return True
+            self.page.wait_for_timeout(1500 + attempt * 1000)
+        return False
 
     def self_username(self) -> str:
         """Best-effort read of the logged-in account's handle (used to tell our
