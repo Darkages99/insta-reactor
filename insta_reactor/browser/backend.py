@@ -423,22 +423,63 @@ class BrowserBackend(Backend):
             log.exception("cover capture failed")
             return None
 
+    # JS: scroll the idx-th reel bubble into the viewport centre and return its
+    # FRESH rect. Enumeration snapshots boxes once, but iter_reels scrolls the
+    # thread to the bottom first, so an older reel's cached box can be above the
+    # viewport — clicking those stale coords misses and the reel mis-flags
+    # "unable to read". Re-resolving after scrollIntoView fixes that.
+    _SCROLL_REEL_JS = """
+    (idx) => {
+      const clips = [...document.querySelectorAll('[aria-label="Clip"]')];
+      const clip = clips[idx];
+      if (!clip) return null;
+      let node = clip, box = null, bubble = null;
+      for (let up = 0; up < 12 && node; up++) {
+        const r = node.getBoundingClientRect();
+        if (r.width >= 120 && r.width <= 600 &&
+            r.height >= 150 && r.height <= 800 && r.height >= r.width) {
+          bubble = node; break;
+        }
+        node = node.parentElement;
+      }
+      const target = bubble || clip;
+      target.scrollIntoView({block: 'center', inline: 'center'});
+      const r = target.getBoundingClientRect();
+      return {x: r.x, y: r.y, w: r.width, h: r.height};
+    }
+    """
+
     def _open_and_read(self, desc: dict, idx: int) -> ReelContext:
         box = desc.get("box") or {}
+        # Re-resolve the reel's box after scrolling it into view — its cached
+        # coords may be off-screen (thread was scrolled to the bottom), which
+        # makes the open-click miss and the reel wrongly flag "unable to read".
+        try:
+            fresh = self.page.evaluate(self._SCROLL_REEL_JS, idx)
+            if fresh and fresh.get("w", 0) > 8 and fresh.get("h", 0) > 8:
+                box = fresh
+                self.page.wait_for_timeout(400)
+        except Exception:
+            log.exception("scroll-into-view failed for reel #%d", idx)
         cx = box.get("x", 0) + box.get("w", 0) / 2
         cy = box.get("y", 0) + box.get("h", 0) / 2
+        # A center click on a tall reel bubble lands where IG's hover controls
+        # (React/Reply/More) appear and just *reveals* them instead of opening the
+        # reel; clicking the UPPER portion of the cover opens it reliably (verified
+        # live). Try upper-third first, then center as a fallback.
+        upper_y = box.get("y", 0) + box.get("h", 0) * 0.3
         try:
             # A screen-time nag ("sleep mode"/"daily limit") can pop up mid-run
             # and sits on top of the thread, swallowing this click. Clear it
             # first — otherwise the reel never opens and we mis-flag it
             # "unable to read".
             self._kill_screentime()
-            self.page.mouse.click(cx, cy)
+            self.page.mouse.click(cx, upper_y)
             self.page.wait_for_timeout(1200)
             shortcode = self._shortcode_from_url()
             if not shortcode:
-                # click may have missed; retry once slightly higher on the reel
-                self.page.mouse.click(cx, cy - box.get("h", 0) / 4)
+                # upper click may have hovered/missed; retry at the bubble centre
+                self.page.mouse.click(cx, cy)
                 self.page.wait_for_timeout(1200)
                 shortcode = self._shortcode_from_url()
             if not shortcode:
