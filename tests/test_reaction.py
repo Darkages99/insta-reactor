@@ -45,7 +45,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(d.flag.kind, FlagKind.UNABLE_TO_READ)
 
     def test_rule2_too_few_comments(self):
-        ctx = make([Comment("💀")] * 8)
+        ctx = make([Comment("💀")] * 3)
         d = decide_reaction(ctx, self.p, self.s)
         self.assertEqual(d.flag.kind, FlagKind.TOO_FEW_COMMENTS)
 

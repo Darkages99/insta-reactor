@@ -87,13 +87,17 @@ class Profile:
 class Settings:
     """Deterministic knobs. Defaults chosen to match the spec's examples."""
 
-    min_comments: int = 15            # Rule 2 hard gate
+    min_comments: int = 5             # Rule 2 hard gate
     comments_to_read: int = 50        # how many to scrape per reel
     # Only the newest N received reels (counting from the bottom of the thread)
-    # are considered "new/unread" and processed. Prevents re-scanning the whole
-    # thread history. Instagram exposes no reliable per-message read flag, so
-    # this newest-N cap is the practical proxy for "unread".
-    max_new_reels: int = 3
+    # are considered "new/unread" and processed per run. Instagram exposes no
+    # reliable per-message read flag, so this newest-N cap is the practical
+    # proxy for "unread". Sized to clear a full spam burst (people dumping
+    # 10-20 reels at once) in one run; the browser backend's reacted watermark
+    # (browser/watermark.py) makes raising this safe — it stops reprocessing
+    # reels a prior run already handled, so this is purely a per-run ceiling,
+    # not a "how much history to rescan" knob.
+    max_new_reels: int = 25
     public_weight: float = 0.4        # spec: public_score * 0.4
     personal_weight: float = 0.6      # spec: my_preference * 0.6
     auto_reply_min_confidence: float = 0.6
@@ -227,6 +231,11 @@ class ReelContext:
     # browser backend. Lets the UI show a *picture* of any un-reacted reel
     # instead of an opaque "reel #2". None for backends that don't capture one.
     thumbnail_path: Optional[str] = None
+    # 1-based position of this reel counting from the BOTTOM of the thread as a
+    # human scrolling their DM would count them (1 = most recent reel bubble).
+    # This is how the review UI tells you *where to look* to find an un-reacted
+    # reel and handle it yourself. None when the backend can't determine it.
+    position_from_bottom: Optional[int] = None
 
     def effective_count(self) -> int:
         if self.comment_count is not None:
@@ -307,6 +316,10 @@ class Decision:
     # Screenshot of the reel's thumbnail (copied from its ReelContext), so the
     # UI can show un-reacted reels as a gallery of pictures.
     thumbnail_path: Optional[str] = None
+    # Where the reel sits in the thread, counted from the bottom (copied from
+    # its ReelContext). The review UI shows this as "Nth reel from the bottom"
+    # so you can find the un-reacted reel in your DM and handle it.
+    position_from_bottom: Optional[int] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)

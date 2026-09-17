@@ -32,10 +32,41 @@ class BrowserDriver:
         self.context = None
         self.page = None
 
+    def _clear_stale_lock(self) -> None:
+        """Remove Chrome's SingletonLock/-Cookie/-Socket from the profile dir.
+
+        Chrome writes these while it owns the profile and removes them on a
+        clean exit. If a prior run was killed (crash, force-close, task
+        manager) they survive, and the next launch sees them and silently
+        forwards to a "session" that isn't actually running instead of
+        starting fresh — which Playwright then reports as the confusing
+        "Opening in existing browser session" failure. They're always safe to
+        delete when nothing is actually running against this profile (a
+        second *real* launch against the same profile only happens if the
+        caller violates the single-run-at-a-time invariant, which is a bug in
+        the caller, not something this lock is meant to catch)."""
+        for name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+            path = os.path.join(self.profile_dir, name)
+            try:
+                if os.path.lexists(path):
+                    os.remove(path)
+            except OSError:
+                pass
+
     def start(self):
-        """Launch the persistent Chromium context and open a page."""
+        """Launch the persistent Chromium context and open a page.
+
+        Idempotent: if we already own an open context (e.g. a prior run in
+        this same process left the browser open waiting for a manual login),
+        reuse it instead of launching a second Chromium against the same
+        profile dir — a second launch against a dir another instance already
+        owns is exactly what trips Chrome's "Opening in existing browser
+        session" failure."""
+        if self.context is not None:
+            return self.page
         from playwright.sync_api import sync_playwright
         os.makedirs(self.profile_dir, exist_ok=True)
+        self._clear_stale_lock()
         self._pw = sync_playwright().start()
         self.context = self._pw.chromium.launch_persistent_context(
             self.profile_dir,

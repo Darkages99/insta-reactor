@@ -32,8 +32,8 @@ def build_fixture():
             "Group Chat": {
                 "reels": [
                     {  # Rule 2: too few comments
-                        "id": "r3", "comment_count": 8,
-                        "comments": [{"text": "💀"}] * 8,
+                        "id": "r3", "comment_count": 3,
+                        "comments": [{"text": "💀"}] * 3,
                     },
                     {  # unable to read
                         "id": "r4", "read_error": True, "comments": None},

@@ -274,9 +274,12 @@ class Runner:
             # every reply when llm_mode="always". No-op unless use_llm + a key.
             decision = self._maybe_llm(ctx, decision)
 
-            # Carry the reel's thumbnail onto the decision so the UI can show a
-            # picture of it (esp. for reels we could NOT react to).
+            # Carry the reel's thumbnail + thread position onto the decision so
+            # the review UI can show a picture of it AND tell the user exactly
+            # where to look ("Nth reel from the bottom") — esp. for reels we
+            # could NOT react to and are handing back to the human.
             decision.thumbnail_path = getattr(ctx, "thumbnail_path", None)
+            decision.position_from_bottom = getattr(ctx, "position_from_bottom", None)
 
             # Reply variety: vary the emoji count / blend in a common non-favourite
             # emoji, and never send the same reaction 3x in a row. Only touches
@@ -317,6 +320,7 @@ class Runner:
                         confidence=decision.confidence,
                         breakdown=decision.breakdown,
                         thumbnail_path=getattr(ctx, "thumbnail_path", None),
+                        position_from_bottom=getattr(ctx, "position_from_bottom", None),
                     )
 
             if not replied:

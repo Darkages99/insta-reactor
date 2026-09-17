@@ -23,7 +23,10 @@ templates/*.png
 
 # browser backend runtime (Playwright profile + captured reel thumbnails)
 data/browser_profile/
+data/browser_profiles/
 data/thumbs/
+data/reel_watermark.json
+data/review.json
 
 # scratch/debug UI dumps (adb uiautomator captures, ad-hoc probe output)
 scratch_*.xml

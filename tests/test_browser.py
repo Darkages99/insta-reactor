@@ -9,6 +9,7 @@ import unittest
 
 from insta_reactor.browser.collector import parse_comment, parse_comments, parse_caption
 from insta_reactor.browser.backend import BrowserBackend, _norm_emoji
+from insta_reactor.browser.watermark import ReelWatermarkStore
 from insta_reactor.backends.simulated import SimulatedBackend
 from insta_reactor.config import AppConfig
 from insta_reactor.models import Profile, Settings
@@ -161,6 +162,154 @@ class ThumbnailPlumbingTests(unittest.TestCase):
         summary = runner.run()
         self.assertTrue(summary.flagged)
         self.assertEqual(summary.flagged[0].thumbnail_path, "data/thumbs/demo.png")
+
+
+class PositionPlumbingTests(unittest.TestCase):
+    def test_position_flows_to_decision(self):
+        # A reel's thread position ("Nth from the bottom") must ride the ctx all
+        # the way onto the flag decision, so the review UI can tell the user
+        # where to look.
+        class PosBackend(SimulatedBackend):
+            def build_reel_context(self, reel):
+                ctx = super().build_reel_context(reel)
+                ctx.position_from_bottom = 4
+                return ctx
+
+        fixtures = {"chats": {"C": {"reels": [
+            {"id": "r1", "comment_count": 2,
+             "comments": [{"text": "lol", "likes": 1}]}
+        ]}}}
+        cfg = AppConfig(profile=Profile(), settings=Settings(min_comments=15),
+                        enabled_chats=["C"])
+        tmp = tempfile.mkdtemp()
+        runner = Runner(PosBackend(fixtures), cfg,
+                        FlagManager(os.path.join(tmp, "q.json")),
+                        send=False, seen_store=SeenStore(os.path.join(tmp, "s.json")),
+                        log_path=os.path.join(tmp, "log.jsonl"))
+        summary = runner.run()
+        self.assertTrue(summary.flagged)
+        self.assertEqual(summary.flagged[0].position_from_bottom, 4)
+
+    def test_iter_reels_computes_position_from_bottom(self):
+        # Fake the page's reel enumeration so iter_reels' newest-first ordering
+        # and position math are exercised without a real browser. Reels are
+        # ordered by viewport y (newest = largest y = nearest composer): three
+        # reels at y=300,200,100 => positions 1,2,3.
+        cfg = AppConfig(profile=Profile(), settings=Settings(max_new_reels=3),
+                        enabled_chats=["C"])
+        b = _stub_backend(cfg,
+            [{"mid": f"m{i}", "y": (i + 1) * 100, "index": i, "total": 3,
+              "sender": "friend", "box": {"x": 0, "y": 0, "w": 200, "h": 300}}
+             for i in range(3)])
+        pairs = list(b.iter_reels())
+        # Newest-first by y: m2 (pos 1), m1 (pos 2), m0 (pos 3).
+        ids = [ctx.reel_id for _, ctx in pairs]
+        positions = [ctx.position_from_bottom for _, ctx in pairs]
+        self.assertEqual(ids, ["m2", "m1", "m0"])
+        self.assertEqual(positions, [1, 2, 3])
+
+
+def _stub_backend(cfg, descs, watermark=None):
+    """A BrowserBackend with every browser-touching helper stubbed, so
+    iter_reels' pure control flow (media-id dedup, newest-first, stop-on-handled)
+    can be exercised with no Playwright. _reel_descriptors returns a fixed list;
+    _open_and_read_desc tags the ctx with the reel's media id."""
+    from insta_reactor.models import ReelContext
+    b = BrowserBackend(cfg, driver=_dummy_driver(), target_direction="any",
+                       watermark_store=watermark)
+    b._chat = "C"
+    b._reel_descriptors = lambda: [dict(d) for d in descs]
+    b._kill_screentime = lambda: 0
+    b._scroll_thread_to_bottom = lambda: None
+    b._settle_reels = lambda: None
+    b._wheel = lambda dy: None
+    b.driver.page = types.SimpleNamespace(wait_for_timeout=lambda ms: None)
+    b._capture_thumbnail = lambda d, i: None
+    b._open_and_read_desc = lambda d: ReelContext(
+        chat_name="C", reel_id=d.get("mid") or "x")
+    return b
+
+
+class WatermarkDedupTests(unittest.TestCase):
+    """The DM list is virtualized, so the backend identifies and dedups reels by
+    their cover-image media id, remembering handled ids per chat (watermark.py).
+    These exercise that against iter_reels without a real browser."""
+
+    def _backend(self, descs):
+        cfg = AppConfig(profile=Profile(), settings=Settings(max_new_reels=25),
+                        enabled_chats=["C"])
+        wm = ReelWatermarkStore(path=os.path.join(tempfile.mkdtemp(), "wm.json"))
+        return _stub_backend(cfg, descs, watermark=wm)
+
+    def _descs(self, mids):
+        # y ordering: first mid in the list is the NEWEST (largest y).
+        n = len(mids)
+        return [{"mid": m, "y": (n - i) * 100, "index": i, "total": n,
+                 "sender": "friend", "box": {"x": 0, "y": 0, "w": 200, "h": 300}}
+                for i, m in enumerate(mids)]
+
+    def test_all_new_reels_yielded_once_newest_first(self):
+        b = self._backend(self._descs(["a", "b", "c"]))
+        pairs = list(b.iter_reels())
+        ids = [ctx.reel_id for _, ctx in pairs]
+        self.assertEqual(ids, ["a", "b", "c"])       # newest-first, no dupes
+
+    def test_already_handled_reels_are_skipped(self):
+        b = self._backend(self._descs(["a", "b", "c"]))
+        b.watermark.mark("C", "b")                   # reacted to b on a prior run
+        ids = [ctx.reel_id for _, ctx in b.iter_reels()]
+        self.assertNotIn("b", ids)
+        self.assertIn("a", ids)
+        self.assertIn("c", ids)
+
+    def test_resend_gets_a_new_media_id_and_is_processed(self):
+        # A genuine resend is a fresh bubble with a NEW media id, so it isn't in
+        # the handled set and is picked up again.
+        b = self._backend(self._descs(["a", "b"]))
+        b.watermark.mark("C", "a")
+        b.watermark.mark("C", "b")
+        # resend of the same content shows up as a new bubble "b2"
+        b._reel_descriptors = lambda: [dict(d) for d in self._descs(["b2", "a", "b"])]
+        ids = [ctx.reel_id for _, ctx in b.iter_reels()]
+        self.assertEqual(ids, ["b2"])
+
+    def test_reel_reacted_this_run_is_not_yielded_twice(self):
+        # Once send_* marks a mid handled, a re-enumeration mid-run must not
+        # re-yield it (the "reacted twice" bug).
+        b = self._backend(self._descs(["a", "b"]))
+        seen = []
+        real_open = b._open_and_read_desc
+        def open_and_mark(d):
+            b.watermark.mark("C", d.get("mid"))      # simulate a successful send
+            return real_open(d)
+        b._open_and_read_desc = open_and_mark
+        for _, ctx in b.iter_reels():
+            seen.append(ctx.reel_id)
+        self.assertEqual(sorted(seen), ["a", "b"])
+        self.assertEqual(len(seen), len(set(seen)))
+
+
+class WatermarkStoreTests(unittest.TestCase):
+    def test_mark_and_is_handled_roundtrip(self):
+        p = os.path.join(tempfile.mkdtemp(), "wm.json")
+        wm = ReelWatermarkStore(path=p)
+        self.assertFalse(wm.is_handled("C", "m1"))
+        wm.mark("C", "m1")
+        self.assertTrue(wm.is_handled("C", "m1"))
+        # persisted across instances
+        self.assertTrue(ReelWatermarkStore(path=p).is_handled("C", "m1"))
+
+    def test_none_media_id_never_handled(self):
+        wm = ReelWatermarkStore(path=os.path.join(tempfile.mkdtemp(), "wm.json"))
+        wm.mark("C", None)                # no-op
+        self.assertFalse(wm.is_handled("C", None))
+
+    def test_old_index_format_is_ignored_not_crashed(self):
+        p = os.path.join(tempfile.mkdtemp(), "wm.json")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write('{"C": {"index": 2, "total": 3}}')
+        wm = ReelWatermarkStore(path=p)   # must not raise
+        self.assertEqual(wm.handled_set("C"), set())
 
 
 if __name__ == "__main__":

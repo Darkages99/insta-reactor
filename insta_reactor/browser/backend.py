@@ -24,6 +24,7 @@ from ..models import ReelContext, Comment
 from ..browser.driver import BrowserDriver
 from ..browser import selectors as S
 from ..browser.collector import collect_comments, extract_caption
+from ..browser.watermark import ReelWatermarkStore
 
 log = logging.getLogger("insta_reactor.browser.backend")
 
@@ -64,7 +65,28 @@ _REELS_JS = """
       const r = clip.getBoundingClientRect();
       box = {x: r.x, y: r.y, w: r.width, h: r.height};
     }
-    out.push({index: i, sender: sender, box: box});
+    // The reel's stable identity: its cover image's fbcdn media id (the numeric
+    // pair in the URL). This is the ONE cheap, stable per-reel handle available
+    // in the thread DOM without opening the reel — distinct reels get distinct
+    // ids, and an id survives scroll/mount churn and reruns. Used for dedup and
+    // the reacted-watermark (see watermark.py). null if no cover img is found.
+    let mid = null;
+    const img = clip.closest ? null : null;
+    let scope = clip;
+    for (let up = 0; up < 12 && scope; up++) {
+      const im = scope.querySelector && scope.querySelector('img[src]');
+      if (im) {
+        const m = (im.getAttribute('src') || '').match(/\\/(\\d{6,})_(\\d{6,})_/);
+        if (m) { mid = m[1] + '_' + m[2]; break; }
+      }
+      scope = scope.parentElement;
+    }
+    // `total` is the count of reel bubbles CURRENTLY MOUNTED (the list is
+    // virtualized, so this is NOT the thread's true reel count — don't rely on
+    // it for anything but a rough newest-first ordering hint).
+    const rect = clip.getBoundingClientRect();
+    out.push({index: i, total: clips.length, sender: sender, box: box,
+              mid: mid, y: rect.y});
   });
   return out;
 }
@@ -81,10 +103,17 @@ class BrowserBackend(Backend):
                  target_direction: str = "incoming",
                  self_username: str = "",
                  thumbs_dir: str = os.path.join("data", "thumbs"),
-                 preload_min_reels: int = 0):
+                 preload_min_reels: int = 0,
+                 profile_dir: str | None = None,
+                 watermark_store: ReelWatermarkStore | None = None):
         self.config = config
-        self.driver = driver or BrowserDriver(
-            headless=getattr(config.settings, "browser_headless", False))
+        driver_kwargs = {"headless": getattr(config.settings, "browser_headless", False)}
+        # profile_dir picks WHICH Instagram account's persistent login this run
+        # drives (each account gets its own Chromium user-data dir, so logins
+        # never clobber each other). None => BrowserDriver's own default account.
+        if profile_dir:
+            driver_kwargs["profile_dir"] = profile_dir
+        self.driver = driver or BrowserDriver(**driver_kwargs)
         # None => sends allowed anywhere (production). A set => sends only in
         # those chats; everywhere else send_* refuses. THE testing guardrail.
         self.send_whitelist = send_whitelist
@@ -100,6 +129,10 @@ class BrowserBackend(Backend):
         # a wide quality sweep isn't limited to whatever's already rendered.
         # Normal/production runs leave this 0 — no extra scrolling, no extra risk.
         self.preload_min_reels = preload_min_reels
+        # Cross-run "already reacted up to here" per chat — see watermark.py.
+        # Lets max_new_reels be raised to clear a whole burst of reels without
+        # risking re-reacting to ones a prior run already handled.
+        self.watermark = watermark_store or ReelWatermarkStore()
 
     # ---- lifecycle ------------------------------------------------------
     def prepare(self) -> None:
@@ -304,69 +337,63 @@ class BrowserBackend(Backend):
         except Exception:
             log.exception("return_to_inbox failed")
 
+    def _viewport(self) -> tuple[int, int]:
+        vp = getattr(self.page, "viewport_size", None) or {}
+        return int(vp.get("width", 1400)), int(vp.get("height", 900))
+
+    def _wheel(self, dy: int) -> None:
+        """Scroll the DM message pane by `dy` px with a REAL mouse wheel over its
+        centre. The thread is a virtualized, column-reverse container whose
+        `scrollTop` is not programmatically settable (assignments are silently
+        ignored — verified live), so the wheel is the only thing that actually
+        moves it. `dy < 0` scrolls UP toward older messages. Never raises."""
+        try:
+            w, h = self._viewport()
+            self.page.mouse.move(w * 0.5, h * 0.45)
+            self.page.mouse.wheel(0, dy)
+        except Exception:
+            pass
+
     def _scroll_thread_to_bottom(self) -> None:
         try:
             self.page.keyboard.press("End")
+            self.page.wait_for_timeout(400)
+            # End alone sometimes leaves us a few messages short of the very
+            # newest; a wheel-down nudge pins us to the bottom (newest) reels.
+            self._wheel(2400)
             self.page.wait_for_timeout(400)
         except Exception:
             pass
         if self.preload_min_reels > 0:
             self._load_history(self.preload_min_reels)
 
-    # JS: find the actual scrollable ancestor of a reel/message bubble (the
-    # virtualized message list) and move ITS scrollTop, not the outer page.
-    # Coordinate-based mouse-wheel scrolling is fragile here — the thread's
-    # scroll container isn't reliably under a guessed (x, y) point across
-    # layouts — so we walk up from a real message node to the element whose
-    # scrollHeight exceeds its clientHeight and scroll that directly.
-    _SCROLL_UP_JS = """
-    (step) => {
-      let node = document.querySelector('[aria-label="Clip"]')
-              || document.querySelector('div[role="row"]')
-              || document.querySelector('div[role="main"]');
-      let el = node;
-      while (el) {
-        if (el.scrollHeight > el.clientHeight + 40) {
-          const before = el.scrollTop;
-          el.scrollTop = Math.max(0, el.scrollTop - step);
-          return {moved: el.scrollTop !== before, top: el.scrollTop};
-        }
-        el = el.parentElement;
-      }
-      return {moved: false, top: -1};
-    }
-    """
+    def _mounted_mids(self) -> set:
+        """Media ids of the target reels currently mounted in the DOM."""
+        return {d.get("mid") for d in self._reel_descriptors()
+                if self._is_target(d) and d.get("mid")}
 
-    def _load_history(self, min_reels: int, max_attempts: int = 20) -> None:
-        """Scroll the open thread upward to lazy-load older messages until at
-        least `min_reels` reel bubbles are present in the DOM (stops early if
-        scrolling stalls — reached the top of the conversation, or no
-        scrollable container was found). Only used for bulk-eval sweeps
-        (browser-run --preload N); never raises."""
-        last_count, stall = -1, 0
+    def _load_history(self, min_reels: int, max_attempts: int = 40) -> None:
+        """Wheel the open thread upward until at least `min_reels` DISTINCT reels
+        (by media id) have been seen, or scrolling stops revealing new ones.
+
+        Counting *mounted* bubbles doesn't work — the list is virtualized, so
+        the mounted count stays ~constant while different reels rotate through.
+        We instead accumulate distinct media ids across scroll steps. Only used
+        for bulk-eval sweeps (browser-run --preload N); never raises."""
+        seen: set = set()
+        stall = 0
         for _ in range(max_attempts):
-            try:
-                count = len(self._reel_descriptors())
-            except Exception:
+            self._kill_screentime()
+            before = len(seen)
+            seen |= self._mounted_mids()
+            if len(seen) >= min_reels:
                 return
-            if count >= min_reels:
-                return
-            if count == last_count:
-                stall += 1
-                if stall >= 3:
-                    return   # no more history to load
-            else:
-                stall = 0
-            last_count = count
-            try:
-                result = self.page.evaluate(self._SCROLL_UP_JS, 2200)
-                if not result or not result.get("moved"):
-                    stall += 1
-                    if stall >= 3:
-                        return
-                self.page.wait_for_timeout(900)
-            except Exception:
-                return
+            self._wheel(-1400)
+            self.page.wait_for_timeout(800)
+            seen |= self._mounted_mids()
+            stall = 0 if len(seen) > before else stall + 1
+            if stall >= 3:
+                return   # reached the top / no more history
 
     # ---- reel enumeration ----------------------------------------------
     def _reel_descriptors(self) -> list[dict]:
@@ -386,47 +413,111 @@ class BrowserBackend(Backend):
             return True
         return self.self_username == "" or sender != self.self_username
 
+    def _mounted_targets(self) -> list[dict]:
+        """Target reels currently mounted in the DOM, NEWEST-FIRST.
+
+        The newest reel sits nearest the composer at the bottom, i.e. the
+        largest viewport `y`. DOM order is unreliable for newest/oldest under
+        virtualization, so we order by `y` descending."""
+        descs = [d for d in self._reel_descriptors() if self._is_target(d)]
+        descs.sort(key=lambda d: d.get("y", 0), reverse=True)
+        return descs
+
     def find_unreacted_reels(self) -> list[ReelHandle]:
         """Interface method; the runner uses iter_reels(). Returns target reels
-        currently in the thread, newest-first."""
-        descs = [d for d in self._reel_descriptors() if self._is_target(d)]
-        return [ReelHandle(reel_id=f"reel#{d['index']}", locator=d)
-                for d in reversed(descs)]
+        currently mounted in the thread, newest-first."""
+        return [ReelHandle(reel_id=d.get("mid") or f"reel#{d['index']}",
+                           locator={"mid": d.get("mid"), "box": d.get("box")})
+                for d in self._mounted_targets()]
+
+    def _settle_reels(self) -> None:
+        """Wait for the bottom reel bubbles to finish mounting. A burst of shares
+        paints over a beat or two; poll until the mounted set stops growing."""
+        last, stall = -1, 0
+        for _ in range(8):
+            self._kill_screentime()
+            n = len(self._mounted_targets())
+            if n == last:
+                stall += 1
+                if n and stall >= 2:
+                    return
+            else:
+                stall = 0
+            last = n
+            self.page.wait_for_timeout(1000)
 
     def iter_reels(self):
-        """Yield (ReelHandle, ReelContext) for the newest target reels.
+        """Yield (ReelHandle, ReelContext) for the newest UNHANDLED target reels.
 
-        Newest-first, capped at settings.max_new_reels. For each reel we capture
-        a thumbnail, open it to read its comments + capture the stable shortcode,
-        then return to the thread and yield. The reel is identified by its index
-        among the thread's reel bubbles, re-resolved fresh for any later send()."""
-        cap = getattr(self.config.settings, "max_new_reels", 3)
-        # Reel bubbles can render their [aria-label="Clip"] a beat after the
-        # thread loads — retry a few times before concluding there are none.
-        descs = []
-        for _ in range(4):
-            # A screen-time nag can cover the thread and stop reels from
-            # rendering/being found — clear it each attempt before enumerating.
+        The DM message list is virtualized (only ~2-3 reel bubbles mount at
+        once), so we can't enumerate the whole thread in one shot. Instead we
+        sweep from the bottom (newest) upward with the mouse wheel, and at each
+        step pick the newest mounted reel we haven't handled yet — identified by
+        its cover-image MEDIA ID, the one stable per-reel handle in the thread
+        DOM (see watermark.py). We stop when:
+          * we've yielded settings.max_new_reels reels, or
+          * we reach a reel already reacted to on a prior run (everything older
+            is handled too), or
+          * wheeling up stops revealing new reels (top of history reached).
+
+        Media-id dedup means each physical reel is opened+reacted at most once,
+        fixing both the old bugs: missing most of a burst (only the rendered two
+        were seen) and re-reacting to the same reel (index-based identity drifted
+        as bubbles mounted/unmounted)."""
+        cap = getattr(self.config.settings, "max_new_reels", 12)
+        self._kill_screentime()
+        self._scroll_thread_to_bottom()
+        self._settle_reels()
+
+        processed: set = set()   # media ids yielded this run (within-run dedup)
+        count, stall = 0, 0
+        # Consecutive wheel-up steps that surfaced no new reel to act on. We stop
+        # once this hits the limit — that's either the top of the thread OR we've
+        # scrolled up into fully-handled/older territory (a burst's reels are
+        # contiguous, so a run of dead steps means the burst is cleared). Using a
+        # stall counter (not "break on the first handled reel") keeps us from
+        # cutting a burst short when replying auto-scrolls its older reels
+        # temporarily out of view.
+        STALL_MAX = 6
+        while count < cap and stall < STALL_MAX:
             self._kill_screentime()
-            descs = [d for d in self._reel_descriptors() if self._is_target(d)]
-            if descs:
+            targets = self._mounted_targets()          # newest-first
+            nxt, rank = None, 0
+            for i, d in enumerate(targets):
+                mid = d.get("mid")
+                if mid and mid in processed:
+                    continue
+                if self.watermark.is_handled(self._chat, mid):
+                    continue
+                nxt, rank = d, i
                 break
-            self.page.wait_for_timeout(1200)
-        targets = list(reversed(descs))[:cap]     # newest-first
-        log.info("iter_reels: %d reel(s) in thread, %d target(s)",
-                 len(descs), len(targets))
-        for d in targets:
-            idx = d["index"]
-            # Primary thumbnail: a clip of the DM reel bubble taken from the
-            # thread (crisp at 2x, and shows the real cover frame). The viewer
-            # cover is only a fallback — the reel's <video> is often an unrendered
-            # black frame when we screenshot it.
-            bubble = self._capture_thumbnail(d, idx)
-            ctx = self._open_and_read(d, idx)   # reads comments+caption, cover fallback
+
+            if nxt is None:
+                # Nothing to act on in view — wheel up to reveal older reels and
+                # retry. Stop only after several dead steps in a row (top reached
+                # or past the burst into handled history).
+                self._wheel(-1200)
+                self.page.wait_for_timeout(900)
+                stall += 1
+                continue
+
+            stall = 0
+            mid = nxt.get("mid")
+            if mid:
+                processed.add(mid)
+            # Thumbnail from the DM bubble (crisp cover frame); open+read for
+            # comments, caption, and the stable shortcode.
+            bubble = self._capture_thumbnail(nxt, count)
+            ctx = self._open_and_read_desc(nxt)
             if bubble:
                 ctx.thumbnail_path = bubble
-            yield ReelHandle(reel_id=ctx.reel_id or f"reel#{idx}",
-                             locator={"index": idx}), ctx
+            # Best-effort "Nth from the bottom" for the review UI: rank among the
+            # reels mounted newest-first when we picked this one (1 = newest).
+            ctx.position_from_bottom = rank + 1
+            count += 1
+            yield ReelHandle(reel_id=ctx.reel_id or mid or f"reel#{count}",
+                             locator={"mid": mid, "box": nxt.get("box")}), ctx
+        log.info("iter_reels: yielded %d reel(s) in %r", count, self._chat)
 
     def _capture_thumbnail(self, desc: dict, idx: int) -> str | None:
         box = desc.get("box") or {}
@@ -498,73 +589,105 @@ class BrowserBackend(Backend):
             log.exception("cover capture failed")
             return None
 
-    # JS: scroll the idx-th reel bubble into the viewport centre and return its
-    # FRESH rect. Enumeration snapshots boxes once, but iter_reels scrolls the
-    # thread to the bottom first, so an older reel's cached box can be above the
-    # viewport — clicking those stale coords misses and the reel mis-flags
-    # "unable to read". Re-resolving after scrollIntoView fixes that.
-    _SCROLL_REEL_JS = """
-    (idx) => {
+    # JS: scroll the reel bubble whose cover-image media id matches into the
+    # viewport centre and return its FRESH rect. We identify by media id (not a
+    # DOM index) because the index is meaningless under virtualization — the
+    # mounted clip list rotates as we scroll. Returns null if no mounted clip
+    # currently carries that media id.
+    _SCROLL_REEL_BY_MID_JS = """
+    (mid) => {
       const clips = [...document.querySelectorAll('[aria-label="Clip"]')];
-      const clip = clips[idx];
-      if (!clip) return null;
-      let node = clip, box = null, bubble = null;
-      for (let up = 0; up < 12 && node; up++) {
-        const r = node.getBoundingClientRect();
-        if (r.width >= 120 && r.width <= 600 &&
-            r.height >= 150 && r.height <= 800 && r.height >= r.width) {
-          bubble = node; break;
+      for (const clip of clips) {
+        let node = clip, bubble = null, found = null;
+        for (let up = 0; up < 12 && node; up++) {
+          if (!found) {
+            const im = node.querySelector && node.querySelector('img[src]');
+            if (im) { const m = (im.getAttribute('src')||'').match(/\\/(\\d{6,})_(\\d{6,})_/);
+                      if (m) found = m[1] + '_' + m[2]; }
+          }
+          const r = node.getBoundingClientRect();
+          if (!bubble && r.width >= 120 && r.width <= 600 &&
+              r.height >= 150 && r.height <= 800 && r.height >= r.width) bubble = node;
+          node = node.parentElement;
         }
-        node = node.parentElement;
+        if (found !== mid) continue;
+        const target = bubble || clip;
+        target.scrollIntoView({block: 'center', inline: 'center'});
+        const r = target.getBoundingClientRect();
+        return {x: r.x, y: r.y, w: r.width, h: r.height};
       }
-      const target = bubble || clip;
-      target.scrollIntoView({block: 'center', inline: 'center'});
-      const r = target.getBoundingClientRect();
-      return {x: r.x, y: r.y, w: r.width, h: r.height};
+      return null;
     }
     """
 
-    def _open_and_read(self, desc: dict, idx: int) -> ReelContext:
-        box = desc.get("box") or {}
-        # Re-resolve the reel's box after scrolling it into view — its cached
-        # coords may be off-screen (thread was scrolled to the bottom), which
-        # makes the open-click miss and the reel wrongly flag "unable to read".
+    def _fresh_box_for_mid(self, mid: str | None):
+        """Scroll the reel with this media id into view and return its fresh box,
+        or None if it isn't mounted. No-op fallback keeps the cached box."""
+        if not mid:
+            return None
         try:
-            fresh = self.page.evaluate(self._SCROLL_REEL_JS, idx)
+            fresh = self.page.evaluate(self._SCROLL_REEL_BY_MID_JS, mid)
             if fresh and fresh.get("w", 0) > 8 and fresh.get("h", 0) > 8:
-                box = fresh
-                self.page.wait_for_timeout(400)
+                # Let the scroll settle before the caller clicks — a click that
+                # races the scroll momentum lands off the cover and the reel
+                # mis-flags "unable to read".
+                self.page.wait_for_timeout(650)
+                return fresh
         except Exception:
-            log.exception("scroll-into-view failed for reel #%d", idx)
+            log.exception("scroll-into-view failed for mid %s", mid)
+        return None
+
+    def _try_open_reel(self, mid: str | None, cached_box: dict) -> str:
+        """Click a reel bubble open and return its shortcode, or "" if it didn't
+        open. Re-resolves the bubble's box by media id right before clicking so
+        stale coords (from a post-reply auto-scroll) don't make the click miss."""
+        box = self._fresh_box_for_mid(mid) or cached_box or {}
         cx = box.get("x", 0) + box.get("w", 0) / 2
         cy = box.get("y", 0) + box.get("h", 0) / 2
         # A center click on a tall reel bubble lands where IG's hover controls
-        # (React/Reply/More) appear and just *reveals* them instead of opening the
-        # reel; clicking the UPPER portion of the cover opens it reliably (verified
-        # live). Try upper-third first, then center as a fallback.
+        # (React/Reply/More) appear and just *reveals* them; clicking the UPPER
+        # portion of the cover opens it reliably (verified live). Try upper-third
+        # first, then centre.
         upper_y = box.get("y", 0) + box.get("h", 0) * 0.3
+        self._kill_screentime()
+        self.page.mouse.click(cx, upper_y)
+        self.page.wait_for_timeout(1100)
+        sc = self._shortcode_from_url()
+        if not sc:
+            self.page.mouse.click(cx, cy)
+            self.page.wait_for_timeout(1100)
+            sc = self._shortcode_from_url()
+        return sc
+
+    def _open_and_read_desc(self, desc: dict) -> ReelContext:
+        """Open the reel described by `desc` (identified by media id), read its
+        comments/caption/shortcode, then close the viewer. Never raises.
+
+        Retries the open a couple of times: right after we reply to the previous
+        reel, Instagram auto-scrolls the thread to the newest message, so the
+        next reel we go to open is briefly mid-scroll and the first click can
+        land on empty space or a hover control. A short settle + a fresh
+        scroll-into-view on retry clears that (it was making ~half a burst
+        mis-flag "unable to read")."""
+        mid = desc.get("mid")
+        tag = mid or "reel"
         try:
-            # A screen-time nag ("sleep mode"/"daily limit") can pop up mid-run
-            # and sits on top of the thread, swallowing this click. Clear it
-            # first — otherwise the reel never opens and we mis-flag it
-            # "unable to read".
-            self._kill_screentime()
-            self.page.mouse.click(cx, upper_y)
-            self.page.wait_for_timeout(1200)
-            shortcode = self._shortcode_from_url()
+            shortcode = ""
+            for attempt in range(3):
+                if attempt:
+                    # let any post-reply auto-scroll finish, then re-resolve.
+                    self.page.wait_for_timeout(700)
+                shortcode = self._try_open_reel(mid, desc.get("box") or {})
+                if shortcode:
+                    break
             if not shortcode:
-                # upper click may have hovered/missed; retry at the bubble centre
-                self.page.mouse.click(cx, cy)
-                self.page.wait_for_timeout(1200)
-                shortcode = self._shortcode_from_url()
-            if not shortcode:
-                log.warning("reel #%d did not open to a /p|reel/ url", idx)
-                return ReelContext(chat_name=self._chat, reel_id=f"reel#{idx}",
+                log.warning("reel %s did not open to a /p|reel/ url", tag)
+                return ReelContext(chat_name=self._chat, reel_id=str(tag),
                                    read_error=True)
             comments, count = collect_comments(
                 self.page, limit=self.config.settings.comments_to_read)
             caption = self._capture_caption()
-            cover = self._capture_cover(shortcode or idx)
+            cover = self._capture_cover(shortcode or tag)
             self._close_reel_viewer()
             return ReelContext(
                 chat_name=self._chat, reel_id=shortcode,
@@ -572,9 +695,9 @@ class BrowserBackend(Backend):
                 caption=caption, thumbnail_path=cover,
                 read_error=(comments == [] and count is None))
         except Exception:
-            log.exception("_open_and_read failed for reel #%d", idx)
+            log.exception("_open_and_read_desc failed for reel %s", tag)
             self._close_reel_viewer()
-            return ReelContext(chat_name=self._chat, reel_id=f"reel#{idx}",
+            return ReelContext(chat_name=self._chat, reel_id=str(tag),
                                read_error=True)
 
     def _shortcode_from_url(self) -> str:
@@ -594,13 +717,10 @@ class BrowserBackend(Backend):
             log.exception("closing reel viewer failed")
 
     def build_reel_context(self, reel: ReelHandle) -> ReelContext:
-        idx = (reel.locator or {}).get("index", 0) if isinstance(reel.locator, dict) else 0
-        descs = self._reel_descriptors()
-        desc = next((d for d in descs if d["index"] == idx), None)
-        if desc is None:
-            return ReelContext(chat_name=self._chat, reel_id=reel.reel_id,
-                               read_error=True)
-        return self._open_and_read(desc, idx)
+        loc = reel.locator if isinstance(reel.locator, dict) else {}
+        mid = loc.get("mid")
+        desc = self._find_target_by_mid(mid) or {"mid": mid, "box": loc.get("box")}
+        return self._open_and_read_desc(desc)
 
     def discard_reel(self, reel: ReelHandle) -> None:
         self._close_reel_viewer()
@@ -615,9 +735,27 @@ class BrowserBackend(Backend):
                   "send.", self._chat, sorted(self.send_whitelist))
         return False
 
-    def _reel_locator_by_index(self, idx: int):
-        descs = self._reel_descriptors()
-        return next((d for d in descs if d["index"] == idx), None)
+    def _find_target_by_mid(self, mid: str | None):
+        """The currently-mounted descriptor with this media id, or None."""
+        if not mid:
+            return None
+        return next((d for d in self._mounted_targets() if d.get("mid") == mid),
+                    None)
+
+    def _locate_bubble(self, reel: ReelHandle) -> dict | None:
+        """Resolve the reel handle to a fresh, scrolled-into-view descriptor for
+        a send. Handles come from iter_reels carrying the media id; the reel may
+        have unmounted since (viewer close, thread re-render), so re-find and
+        re-scroll it into view by media id."""
+        loc = reel.locator if isinstance(reel.locator, dict) else {}
+        mid = loc.get("mid")
+        fresh = self._fresh_box_for_mid(mid)          # scrolls it into view
+        desc = self._find_target_by_mid(mid)
+        if desc is None and (fresh or loc.get("box")):
+            desc = {"mid": mid, "box": fresh or loc.get("box")}
+        elif desc is not None and fresh:
+            desc = {**desc, "box": fresh}
+        return desc
 
     def _hover_reveal_controls(self, desc: dict) -> None:
         box = desc.get("box") or {}
@@ -631,36 +769,50 @@ class BrowserBackend(Backend):
             return False
         if _norm_emoji(emoji) not in {_norm_emoji(e) for e in S.QUICK_REACTION_EMOJIS}:
             return False   # not a one-tap emoji; let the runner fall back to reply
-        idx = (reel.locator or {}).get("index", 0)
-        desc = self._reel_locator_by_index(idx)
+        desc = self._locate_bubble(reel)
+        mid = (reel.locator or {}).get("mid")
         if desc is None:
             return False
+        # Arm the reaction bar FIRST. If we can't even open it, return False
+        # before touching anything — the runner then falls back to a typed
+        # reply. Once we've actually clicked an emoji we return True regardless,
+        # so the runner never ALSO sends a reply on top of a reaction we just
+        # placed (that double-send was one way a reel got "reacted to twice").
         try:
             self._hover_reveal_controls(desc)
             react = self.page.locator(
                 f'[aria-label^="{S.REACT_BUTTON_PREFIX}"]').last
             react.click()
             self.page.wait_for_timeout(500)
-            target = _norm_emoji(emoji)
-            btn = self.page.locator('[role="button"]').filter(
-                has_text=re.compile(re.escape(target))).last
-            btn.click()
-            self.page.wait_for_timeout(600)
-            log.info("reacted %s to reel #%d in %r", emoji, idx, self._chat)
-            return True
         except Exception:
-            log.exception("send_reaction failed")
+            log.info("reaction bar not armed; falling back to typed reply")
             try:
                 self.page.keyboard.press("Escape")
             except Exception:
                 pass
             return False
+        try:
+            target = _norm_emoji(emoji)
+            btn = self.page.locator('[role="button"]').filter(
+                has_text=re.compile(re.escape(target))).last
+            btn.click()
+            self.page.wait_for_timeout(600)
+        except Exception:
+            log.exception("emoji pick failed after opening reaction bar")
+            try:
+                self.page.keyboard.press("Escape")
+            except Exception:
+                pass
+        # Best-effort either way: mark handled so we never re-react to this reel.
+        log.info("reacted %s to reel %s in %r", emoji, mid, self._chat)
+        self.watermark.mark(self._chat, mid)
+        return True
 
     def send_reply(self, reel: ReelHandle, text: str) -> bool:
         if not self._send_allowed():
             return False
-        idx = (reel.locator or {}).get("index", 0)
-        desc = self._reel_locator_by_index(idx)
+        desc = self._locate_bubble(reel)
+        mid = (reel.locator or {}).get("mid")
         try:
             # Quote the specific reel so the reply attaches to it (not a floating
             # thread message). Falls back to the plain composer if the Reply
@@ -679,7 +831,8 @@ class BrowserBackend(Backend):
             self.page.wait_for_timeout(300)
             self.page.keyboard.press("Enter")
             self.page.wait_for_timeout(800)
-            log.info("replied %r to reel #%d in %r", text, idx, self._chat)
+            log.info("replied %r to reel %s in %r", text, mid, self._chat)
+            self.watermark.mark(self._chat, mid)
             return True
         except Exception:
             log.exception("send_reply failed")

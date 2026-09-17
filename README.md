@@ -49,11 +49,28 @@ python -m insta_reactor browser-ui           # open http://127.0.0.1:8770/
 First run: a Chrome window opens — **log into Instagram once** (we never touch
 your password; the session is remembered in `data/browser_profile/`). Then in the
 UI pick your whitelisted chats and hit **Run**. The reactor opens each chat,
-reads each reel's comments, AI-synthesises a reaction, and reacts — then shows:
+reads each reel's comments, AI-synthesises a reaction, and reacts.
 
-- ✅ what it **reacted to** (with the reply it sent), and
-- 🙋 a **gallery of thumbnail screenshots** of every reel it *couldn't* react to,
-  each with a plain-language reason — so you see at a glance which reels need you.
+### The review panel — built to save you from scrolling spam
+
+The panel is organised **around your chats**, not a flat wall of reels. You open
+it and see every chat the bot has gone over:
+
+- A chat it fully handled shows **✓ all clear** and stays collapsed.
+- A chat with reels it *couldn't* safely handle wears a **🙋 N need you** badge
+  and opens automatically. Click it and, for each flagged reel, you get:
+  - a **thumbnail** of the reel (a real screenshot captured during the run),
+  - a plain-language **reason** it was left for you,
+  - **▶ Open this reel** — a direct link that opens that exact reel on Instagram
+    (the reel's stable shortcode), so you don't have to hunt for it. Clicking the
+    thumbnail does the same. Only when a reel has no stable link (e.g. it failed
+    to open) does the panel fall back to *"📍 3rd reel from the bottom"* so you
+    can still locate it by scrolling.
+  - a **Mark handled ✓** button that clears it from your queue.
+
+The state persists to `data/review.json`, so re-opening the panel later still
+shows what needs you — no re-run required. Reels the bot reacted to are tucked
+behind a *"Show what the bot handled for you"* expander (they need no action).
 
 Scriptable equivalent (headless-friendly):
 
