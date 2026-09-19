@@ -17,9 +17,10 @@ import json
 import os
 
 from .engine.comment_filter import reactable
+from .paths import data_path
 
 
-DEFAULT_SEEN_PATH = os.path.join("data", "handled_reels.json")
+DEFAULT_SEEN_PATH = data_path("handled_reels.json")
 
 
 def signature(chat_name: str, comments, top_n: int = 25) -> str | None:

@@ -16,9 +16,11 @@ from __future__ import annotations
 import logging
 import os
 
+from ..paths import data_path
+
 log = logging.getLogger("insta_reactor.browser.driver")
 
-DEFAULT_PROFILE_DIR = os.path.join("data", "browser_profile")
+DEFAULT_PROFILE_DIR = data_path("browser_profile")
 INBOX_URL = "https://www.instagram.com/direct/inbox/"
 
 

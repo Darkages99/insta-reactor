@@ -27,6 +27,7 @@ data/browser_profiles/
 data/thumbs/
 data/reel_watermark.json
 data/review.json
+data/live/
 
 # scratch/debug UI dumps (adb uiautomator captures, ad-hoc probe output)
 scratch_*.xml

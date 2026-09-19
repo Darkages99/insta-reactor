@@ -26,7 +26,9 @@ from __future__ import annotations
 import json
 import os
 
-DEFAULT_WATERMARK_PATH = os.path.join("data", "reel_watermark.json")
+from ..paths import data_path
+
+DEFAULT_WATERMARK_PATH = data_path("reel_watermark.json")
 
 
 class ReelWatermarkStore:

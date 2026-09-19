@@ -266,6 +266,10 @@ class FlagKind:
     # auto-react to it — always a human's call — regardless of what the crowd or
     # the LLM would say.
     SENSITIVE_CONTENT = "sensitive_content"
+    # You stepped in while the bot was running — it saw you type a message or
+    # place your own reaction on a reel (or you hit Stop). The bot backs off the
+    # whole run so it never talks over you mid-conversation.
+    USER_ACTIVE = "user_active"
 
 
 @dataclass

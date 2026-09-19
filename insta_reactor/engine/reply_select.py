@@ -19,7 +19,7 @@ from __future__ import annotations
 import hashlib
 import re
 
-from ..models import Profile, Settings, Comment, ReplyStyle
+from ..models import Profile, Settings, Comment, ReplyStyle, Emotion
 from .comment_filter import reactable
 from .normalize import extract_emojis, strip_variation
 from .slang_map import EMOJI_EMOTION
@@ -132,14 +132,38 @@ def select_reply(
 # ---------------------------------------------------------------------------
 # Reactions that are pure emoji get stylistically varied so we don't send the
 # exact same thing to every reel (which reads as a bot). We vary the COUNT
-# (1..MAX) and, when the crowd is leaning on an emoji that isn't in your
-# favourites, blend it with your favourite. We never send the same reply 3+
-# times in a row. popular_verbatim is left untouched — it's a real crowd comment
-# we echo as-is, not something to restyle.
+# (1..MAX) and BLEND in a related emoji — one from the same emotional family
+# (crying/skull/other laughs), or a non-favourite emoji the crowd itself is
+# leaning on. This is how a real person reacts: a dark-humour clip gets a
+# skull+laugh (💀😂), a silly one gets crying-laughing (😭😂), and the count
+# drifts between one and a few. We never send the same reply 3+ times in a row.
+# popular_verbatim is left untouched — it's a real crowd comment we echo as-is,
+# not something to restyle.
 
-# sources whose (emoji) reply we may restyle
-_DIVERSIFY_SOURCES = {"favourite_match", "emotion"}
-MAX_EMOJI_REPEAT = 5   # user wants the emoji count to vary between 1 and 5
+# Sources whose (pure-emoji) reply we may restyle. "llm" is included because
+# with llm_mode="always" the model authors EVERY reply, and left alone it leans
+# on the same one or two glyphs (observed live: '😂😂' three reels running). We
+# only ever touch pure-emoji replies here, so the model's worded replies
+# ('bro 💀', 'nah that's crazy') still pass through untouched — only its bare
+# emoji reactions get the count/blend/anti-repeat variety.
+_DIVERSIFY_SOURCES = {"favourite_match", "emotion", "llm"}
+MAX_EMOJI_REPEAT = 4   # user wants the emoji count to vary between 1 and 4
+
+
+# Related emoji to blend in, keyed by the primary's canonical emotion. Ordered
+# best-first; the primary itself is filtered out at blend time, so listing it is
+# harmless. These are the "other related emojis" people naturally mix (per the
+# user's request): laughter tips into tears or a skull; a skull-laugh pairs the
+# two; crying-laughing go together on silly stuff.
+RELATED_EMOJI: dict[str, list[str]] = {
+    Emotion.LAUGH:  ["😭", "💀", "🤣", "😹"],   # crying-laughing, skull-laugh
+    Emotion.CRYING: ["😂", "😭", "🥲", "😢"],   # tips into laughing when it's silly
+    Emotion.DEAD:   ["😂", "💀", "😭", "🤣"],   # skull + laugh
+    Emotion.LOVE:   ["🥰", "😍", "❤️", "🫶"],
+    Emotion.FIRE:   ["💯", "🔥", "🐐"],
+    Emotion.SHOCK:  ["😱", "😮", "🤯", "💀"],
+    Emotion.ANGRY:  ["😤", "😡", "🤬"],
+}
 
 
 def _is_pure_emoji(text: str) -> bool:
@@ -158,19 +182,33 @@ def _emoji_counts(comments: list[Comment]) -> dict[str, int]:
     return counts
 
 
-def _mix_emoji(comments: list[Comment], profile: Profile, primary: str) -> str | None:
-    """The most common comment emoji that is NOT one of your favourites and
-    differs from `primary` — the 'other' emoji to blend in (per the user's
-    request to mix a list-emoji with a common non-list one). Must actually be
-    common (appears >= 2x) so we don't blend in a one-off."""
-    fav_bases = {strip_variation(extract_emojis(f)[0])
-                 for f in profile.emoji_prefs if extract_emojis(f)}
-    p = strip_variation(primary)
-    for emoji, n in sorted(_emoji_counts(comments).items(),
-                           key=lambda kv: (-kv[1], kv[0])):
-        if emoji != p and emoji not in fav_bases and n >= 2:
-            return emoji
-    return None
+def _blend_pool(primary: str, comments: list[Comment]) -> list[str]:
+    """Ordered list of distinct emoji we may blend alongside `primary`. Real
+    crowd signal comes first: any other emoji THIS reel's comments are
+    actually leaning on (>=2 uses, ranked by count) — a reel whose crowd mixes
+    fire and laughing should blend fire+laughing, not fire+goat just because
+    goat is fire's usual family pairing. The generic same-family preset
+    (RELATED_EMOJI) only fills in candidates the crowd itself didn't supply.
+    Never contains `primary`. A crowd emoji that also happens to be one of
+    your favourites still counts — favourites are common reaction emoji for a
+    reason, and excluding them was masking real crowd mixes with the generic
+    preset (the "fire fire goat" bug)."""
+    base = strip_variation(primary)
+    emotion = EMOJI_EMOTION.get(base)
+    pool: list[str] = []
+    seen: set[str] = {base}
+    for e, n in sorted(_emoji_counts(comments).items(),
+                       key=lambda kv: (-kv[1], kv[0])):
+        b = strip_variation(e)
+        if b not in seen and n >= 2:
+            seen.add(b)
+            pool.append(e)
+    for e in RELATED_EMOJI.get(emotion, []):
+        b = strip_variation(e)
+        if b not in seen:
+            seen.add(b)
+            pool.append(e)
+    return pool
 
 
 def _variety_seed(comments: list[Comment]) -> int:
@@ -184,11 +222,14 @@ def diversify_reply(reply_text: str, reply_source: str,
     """Give a pure-emoji reply natural variety.
 
     - varies the emoji count between 1 and MAX_EMOJI_REPEAT,
-    - blends in a common non-favourite comment emoji when one exists,
+    - blends in ONE related emoji — same-family (crying/skull/other laughs) or a
+      common non-favourite emoji the crowd is using — usually at the end, and
+      occasionally leading (💀😂 vs 😂💀). The primary stays dominant so the
+      reaction keeps the emotion the crowd landed on,
     - never produces a reply identical to the previous *two* in `recent`
       (so at most 2 identical replies in a row).
 
-    Deterministic given its inputs (the length/mix choice is seeded from the
+    Deterministic given its inputs (length/blend choices are seeded from the
     comment set), so it's fully unit-testable; `recent` is the list of replies
     already sent this run, supplied by the runner. Non-emoji or verbatim replies
     (e.g. an echoed popular comment, or 'bro 💀') pass through unchanged.
@@ -197,27 +238,36 @@ def diversify_reply(reply_text: str, reply_source: str,
         return reply_text
     primary = extract_emojis(reply_text)[0]
     comments = reactable(comments)
-    mix = _mix_emoji(comments, profile, primary)
+    pool = _blend_pool(primary, comments)
     seed = _variety_seed(comments)
 
-    def build(length: int, use_mix: bool) -> str:
+    def build(length: int, blend: bool, accent_idx: int, lead: bool) -> str:
         length = max(1, min(MAX_EMOJI_REPEAT, length))
-        if use_mix and mix:
-            return (primary * (length - 1) + mix) if length >= 2 else primary + mix
-        return primary * length
+        if not (blend and pool and length >= 2):
+            return primary * length
+        accent = pool[accent_idx % len(pool)]
+        # keep the primary dominant: exactly one accent glyph, at the end
+        # (default) or leading (occasionally), so runs read like 😂😂😭 / 💀😂.
+        return (accent + primary * (length - 1)) if lead \
+            else (primary * (length - 1) + accent)
 
     length = 1 + (seed % MAX_EMOJI_REPEAT)                        # 1..MAX
-    use_mix = mix is not None and (seed // MAX_EMOJI_REPEAT) % 3 != 0  # ~2/3 when available
-    reply = build(length, use_mix)
+    # blend ~2/3 of the time when a related/crowd emoji is available.
+    blend = bool(pool) and (seed // MAX_EMOJI_REPEAT) % 3 != 0
+    accent_idx = seed // (MAX_EMOJI_REPEAT * 3)                   # which related emoji
+    lead = (seed // (MAX_EMOJI_REPEAT * 3 * 4)) % 4 == 0          # ~1/4 lead with accent
+    reply = build(length, blend, accent_idx, lead)
 
     # enforce "no more than 2 identical in a row": if this would be the third
-    # identical reply, cycle the length (and flip the mix each full cycle) until
-    # it differs. The MAX distinct lengths guarantee we find a different reply.
-    for _ in range(2 * MAX_EMOJI_REPEAT):
+    # identical reply, cycle the length (flipping the blend / advancing the
+    # accent each time we wrap back to 1) until it differs. The distinct lengths
+    # and blend variants guarantee we find a different reply.
+    for _ in range(3 * MAX_EMOJI_REPEAT):
         if not (len(recent) >= 2 and recent[-1] == reply and recent[-2] == reply):
             break
         length = 1 + (length % MAX_EMOJI_REPEAT)
-        if length == 1 and mix:
-            use_mix = not use_mix
-        reply = build(length, use_mix)
+        if length == 1:
+            blend = not blend
+            accent_idx += 1
+        reply = build(length, blend, accent_idx, lead)
     return reply

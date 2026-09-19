@@ -82,6 +82,13 @@ def notify_from_summary(topic: str, summary: RunSummary) -> int:
     sent = 0
     flagged = summary.flagged
 
+    stopped = [d for d in flagged
+               if d.flag and d.flag.kind == FlagKind.USER_ACTIVE]
+    if stopped:
+        if push(topic, "Bot stopped early",
+                _snippets(stopped, limit=1), priority="high"):
+            sent += 1
+
     texts = [d for d in flagged
              if d.flag and d.flag.kind == FlagKind.INCOMING_TEXT]
     if texts:

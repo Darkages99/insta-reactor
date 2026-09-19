@@ -26,7 +26,9 @@ from .config import (
     AppConfig, load_config, save_config, config_exists, DEFAULT_CONFIG_PATH,
 )
 from .models import Profile, Settings, ReplyStyle
-from .flags import FlagManager
+from .flags import FlagManager, DEFAULT_QUEUE_PATH
+from .seen_store import DEFAULT_SEEN_PATH
+from .interaction_log import DEFAULT_LOG_PATH
 from .runner import Runner
 from .report import summarize, explain, to_dict
 from .backends.simulated import SimulatedBackend
@@ -470,8 +472,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--json", action="store_true",
                     help="print a single JSON summary line instead of human "
                          "text (for the phone app / scripting)")
-    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
-    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"),
+    sp.add_argument("--queue", default=DEFAULT_QUEUE_PATH)
+    sp.add_argument("--seen", default=DEFAULT_SEEN_PATH,
                     help="path to the persistent already-reacted store")
     sp.set_defaults(func=cmd_run)
 
@@ -480,8 +482,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--ntfy-topic", default="",
                     help="ntfy.sh topic for error/unsure push notifications "
                          "(saved to config.json once set)")
-    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
-    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"))
+    sp.add_argument("--queue", default=DEFAULT_QUEUE_PATH)
+    sp.add_argument("--seen", default=DEFAULT_SEEN_PATH)
     sp.set_defaults(func=cmd_webui)
 
     sp = sub.add_parser("browser-ui",
@@ -514,19 +516,19 @@ def build_parser() -> argparse.ArgumentParser:
                          "processing (bulk quality-eval sweeps; default = off)")
     sp.add_argument("--verbose", action="store_true")
     sp.add_argument("--json", action="store_true")
-    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
-    sp.add_argument("--seen", default=os.path.join("data", "handled_reels.json"))
+    sp.add_argument("--queue", default=DEFAULT_QUEUE_PATH)
+    sp.add_argument("--seen", default=DEFAULT_SEEN_PATH)
     sp.set_defaults(func=cmd_browser_run)
 
     sp = sub.add_parser("queue", help="show pending manual-review items")
-    sp.add_argument("--queue", default=os.path.join("data", "review_queue.json"))
+    sp.add_argument("--queue", default=DEFAULT_QUEUE_PATH)
     sp.set_defaults(func=cmd_queue)
 
     sp = sub.add_parser("explain", help="print full reasoning for a fixture")
     sp.add_argument("--simulate", required=True, metavar="FIXTURE.json")
     sp.set_defaults(func=cmd_explain)
 
-    _LOG_DEFAULT = os.path.join("data", "interaction_log.jsonl")
+    _LOG_DEFAULT = DEFAULT_LOG_PATH
 
     sp = sub.add_parser("coldstart",
                         help="derive the profile from your own past messages")

@@ -1,16 +1,21 @@
-"""Reply variety (diversify_reply): vary emoji count 1..5, blend in a common
-non-favourite emoji, and never send the same reaction 3x in a row.
+"""Reply variety (diversify_reply): vary emoji count 1..4, blend in a related
+emoji (same emotional family — crying/skull/other laughs — or a common
+non-favourite emoji the crowd is using), and never send the same reaction 3x in
+a row.
 
-This addresses the live observation that 5 consecutive laugh-reels all got the
-identical single '😂'. These tests are pure/deterministic (no device)."""
+This addresses the live observation that consecutive laugh-reels all got the
+identical single '😂' (and the paired '😂😂'). These tests are pure/
+deterministic (no device)."""
 
 from __future__ import annotations
 
 from insta_reactor.models import Profile, Settings, Comment, ReplyStyle
 from insta_reactor.engine.reply_select import (
-    diversify_reply, _mix_emoji, _is_pure_emoji, MAX_EMOJI_REPEAT,
+    diversify_reply, _blend_pool, _is_pure_emoji,
+    MAX_EMOJI_REPEAT, RELATED_EMOJI,
 )
-from insta_reactor.engine.normalize import extract_emojis
+from insta_reactor.engine.normalize import extract_emojis, strip_variation
+from insta_reactor.models import Emotion
 
 LAUGH = "😂"
 EYES = "👀"     # common in comments, NOT in the profile list
@@ -43,6 +48,21 @@ class TestPassthrough:
                             PROFILE, SET, [])
         assert r == "bro 💀"
 
+    def test_llm_worded_reply_unchanged(self):
+        # the LLM authors most replies live; its WORDED replies must pass through
+        r = diversify_reply("nah that's crazy 💀", "llm", _laugh_comments(),
+                            PROFILE, SET, [])
+        assert r == "nah that's crazy 💀"
+
+    def test_llm_pure_emoji_reply_is_diversified(self):
+        # the live bug: llm returns '😂😂' every laugh reel. Pure-emoji llm
+        # replies must get the same variety treatment (never 3x identical).
+        c = _laugh_comments()
+        r0 = diversify_reply("😂😂", "llm", c, PROFILE, SET, [])
+        assert LAUGH in extract_emojis(r0)
+        r1 = diversify_reply("😂😂", "llm", c, PROFILE, SET, [r0, r0])
+        assert r1 != r0                         # not a third identical in a row
+
     def test_is_pure_emoji(self):
         assert _is_pure_emoji("😂😂")
         assert not _is_pure_emoji("bro 💀")
@@ -55,8 +75,21 @@ class TestVariety:
                             PROFILE, SET, [])
         got = extract_emojis(r)
         assert 1 <= len(got) <= MAX_EMOJI_REPEAT
-        assert set(got) <= {LAUGH, EYES}          # primary and/or the mix emoji
-        assert LAUGH in got                        # always keeps the favourite
+        # the run is the primary plus at most one blended accent from the pool
+        # (a related-emotion emoji or the common crowd emoji).
+        allowed = {strip_variation(LAUGH)} | {
+            strip_variation(e) for e in _blend_pool(LAUGH, _laugh_comments())}
+        assert {strip_variation(g) for g in got} <= allowed
+        assert LAUGH in got                        # primary stays dominant
+        assert len({strip_variation(g) for g in got}) <= 2   # primary + 1 accent
+
+    def test_blend_pool_has_related_emotion_emojis(self):
+        # a laugh reaction should be able to blend crying/skull (dark/silly
+        # humour), per the user request — not just the common crowd emoji.
+        pool = {strip_variation(e) for e in _blend_pool(LAUGH, _laugh_comments())}
+        related = {strip_variation(e) for e in RELATED_EMOJI[Emotion.LAUGH]}
+        assert pool & related                       # at least one related emoji
+        assert strip_variation(EYES) in pool        # and the common crowd emoji
 
     def test_deterministic(self):
         a = diversify_reply(LAUGH, "favourite_match", _laugh_comments("x"),
@@ -65,11 +98,26 @@ class TestVariety:
                             PROFILE, SET, [])
         assert a == b
 
-    def test_mix_emoji_is_common_nonfavourite(self):
-        assert _mix_emoji(_laugh_comments(), PROFILE, LAUGH) == EYES
-        # a one-off non-favourite emoji is NOT blended in (needs >= 2)
-        rare = _comments(LAUGH, LAUGH, LAUGH, "🥶 once")
-        assert _mix_emoji(rare, PROFILE, LAUGH) is None
+    def test_blend_pool_needs_two_uses(self):
+        # a one-off emoji is NOT blended in (needs >= 2)
+        rare = _comments(FIRE, FIRE, FIRE, "🥶 once")
+        assert strip_variation("🥶") not in {
+            strip_variation(e) for e in _blend_pool(FIRE, rare)}
+
+    def test_blend_pool_prefers_real_crowd_mix_over_generic_preset(self):
+        # regression: a fire-dominant reel whose crowd ALSO uses laughing a
+        # lot used to blend in the generic FIRE-family preset (🐐/💯, "fire
+        # fire goat") even when the actual comments were mixing fire+laugh —
+        # because the crowd-mix candidate was silently dropped whenever it
+        # was also one of the user's favourites (LAUGH is, per PROFILE). The
+        # real crowd emoji must now win and rank ahead of the generic preset.
+        mixed = _comments(*([f"{FIRE} lit"] * 6 + [f"{LAUGH} dead"] * 5))
+        pool = [strip_variation(e) for e in _blend_pool(FIRE, mixed)]
+        assert strip_variation(LAUGH) in pool
+        goat, hundred = strip_variation("🐐"), strip_variation("💯")
+        for generic in (goat, hundred):
+            if generic in pool:
+                assert pool.index(strip_variation(LAUGH)) < pool.index(generic)
 
     def test_never_three_identical_in_a_row(self):
         c = _laugh_comments()

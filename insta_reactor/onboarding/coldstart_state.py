@@ -16,7 +16,9 @@ import json
 import os
 import re
 
-_STATE_DIR = os.path.join("data", "coldstart_scans")
+from ..paths import data_path
+
+_STATE_DIR = data_path("coldstart_scans")
 
 
 def _safe_name(chat: str) -> str:

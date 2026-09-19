@@ -61,9 +61,15 @@ class TestLlmRescue(unittest.TestCase):
         backend, summary = self._run(self._cfg(), client)
         self.assertEqual(len(summary.auto_replied), 1)
         d = summary.auto_replied[0]
-        self.assertEqual(d.reply_text, "😭😭")
+        # The LLM authored the reply (rescue path). Its pure-emoji output now gets
+        # the same variety treatment as any other reaction (count/blend), so we
+        # assert the shape — crying-family emoji, still emoji-only, source llm —
+        # rather than the exact verbatim glyphs.
         self.assertEqual(d.reply_source, "llm")
-        self.assertEqual(backend.sent[0], ("Sarah", "r5", "😭😭"))
+        self.assertIn("😭", d.reply_text)
+        self.assertTrue(all(not ch.isalnum() for ch in d.reply_text))
+        self.assertEqual(backend.sent[0][:2], ("Sarah", "r5"))
+        self.assertEqual(backend.sent[0][2], d.reply_text)
         self.assertTrue(client.calls >= 1)
 
     def test_low_confidence_llm_keeps_flag(self):

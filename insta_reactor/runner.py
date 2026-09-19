@@ -48,12 +48,18 @@ class Runner:
                  flag_manager: FlagManager | None = None,
                  send: bool = True,
                  seen_store: SeenStore | None = None,
-                 log_path: str | None = None):
+                 log_path: str | None = None,
+                 should_stop=None):
         self.backend = backend
         self.config = config
         self.flags = flag_manager or FlagManager()
         # send=False => "plan only": decide everything but never actually send.
         self.send = send
+        # Cooperative cancellation. `should_stop()` returning True (the web UI's
+        # Stop button) OR the backend noticing YOU are active (you typed a
+        # message / reacted to a reel yourself — backend.stop_reason) aborts the
+        # run at the next reel/chat boundary, so the bot never talks over you.
+        self._should_stop = should_stop or (lambda: False)
         # Persistent cross-run dedup so we never re-react to the same reel.
         self.seen = seen_store if seen_store is not None else SeenStore()
         # Offline emotion model (None unless enabled+installed => rules only).
@@ -83,12 +89,28 @@ class Runner:
         # — see resend-reels-should-react). Reset per run in run().
         self._reacted_sigs: set = set()
 
+    def _stopping(self) -> bool:
+        """True once the run should abort — either you pressed Stop (should_stop)
+        or the backend saw you step in (backend.stop_reason). Checked at every
+        reel/chat boundary so a stop lands promptly without a hard kill."""
+        if self._should_stop():
+            return True
+        return bool(getattr(self.backend, "stop_reason", None))
+
+    def _stop_reason(self) -> str:
+        if getattr(self.backend, "stop_reason", None):
+            return self.backend.stop_reason
+        return "You stopped the bot."
+
     def run(self) -> RunSummary:
         summary = RunSummary()
         self._reacted_sigs = set()   # fresh per run (see field doc)
         self.backend.prepare()
 
         for chat_name in self.config.enabled_chats:
+            if self._stopping():
+                log.info("stop requested — ending run before chat %r", chat_name)
+                break
             try:
                 self._process_chat(chat_name, summary)
             except Exception as exc:  # never let one chat kill the whole run
@@ -106,6 +128,19 @@ class Runner:
                     self.backend.return_to_inbox()
                 except Exception:
                     log.exception("failed returning to inbox after %r", chat_name)
+            if self._stopping():
+                break
+
+        # If the run was cut short (you hit Stop, or the bot saw you step in),
+        # record ONE user_active flag so the summary/notifications and the web
+        # panel say plainly why it stopped instead of looking like a clean run.
+        if self._stopping():
+            reason = self._stop_reason()
+            log.warning("run stopped: %s", reason)
+            d = Decision(action=Action.FLAG,
+                         flag=Flag(FlagKind.USER_ACTIVE, reason))
+            self.flags.enqueue(d)
+            summary.add(d)
 
         self.flags.save()
         self.seen.save()
@@ -218,12 +253,15 @@ class Runner:
         # so nothing gets silently left on read. Done before the reel sweep so
         # the watermark is read pre-reply. Never let this abort the chat.
         try:
-            for txt in self.backend.unanswered_incoming_texts():
+            for txt, shot in self.backend.incoming_texts_with_shots():
                 d = Decision(
                     action=Action.FLAG,
                     flag=Flag(FlagKind.INCOMING_TEXT, txt),
                     chat_name=chat_name,
                     reel_id="text",
+                    # A screenshot of the message so the panel shows it as a
+                    # picture, exactly like a reel it couldn't react to.
+                    thumbnail_path=shot,
                 )
                 self.flags.enqueue(d)
                 summary.add(d)
@@ -232,6 +270,11 @@ class Runner:
 
         seen = 0
         for reel, ctx in self.backend.iter_reels():
+            # Bail the moment you step in (Stop button, or you typed/reacted
+            # yourself). Release the open reel so the browser returns cleanly.
+            if self._stopping():
+                self.backend.discard_reel(reel)
+                break
             seen += 1
 
             # Dedup policy (see resend-reels-should-react memory):

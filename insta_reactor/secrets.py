@@ -18,9 +18,11 @@ import json
 import logging
 import os
 
+from .paths import data_path
+
 log = logging.getLogger("insta_reactor.secrets")
 
-DEFAULT_SECRETS_PATH = os.path.join("data", "secrets.json")
+DEFAULT_SECRETS_PATH = data_path("secrets.json")
 
 # Logical secret name -> the env var checked first for it.
 _ENV_FOR = {

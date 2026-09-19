@@ -79,6 +79,18 @@ class Backend(ABC):
         """
         return []
 
+    def incoming_texts_with_shots(
+            self, cap: int = 8) -> list[tuple[str, str | None]]:
+        """Like `unanswered_incoming_texts`, but each text paired with the path to
+        a screenshot of that message (or None). Lets the review UI show the
+        other person's text exactly like a reel it couldn't handle — a picture
+        plus the message — instead of text alone.
+
+        Default derives from `unanswered_incoming_texts` with no screenshot, so
+        backends that can't screenshot (fixtures, the phone) keep working.
+        """
+        return [(t, None) for t in self.unanswered_incoming_texts(cap)]
+
     # ---- cold-start onboarding ------------------------------------------
     def iter_own_recent_messages(self, cap: int = 200) -> list[str]:
         """Return the user's OWN recently-sent messages (text of outgoing

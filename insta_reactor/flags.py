@@ -13,9 +13,10 @@ import time
 from dataclasses import dataclass, field, asdict
 
 from .models import Decision
+from .paths import data_path
 
 
-DEFAULT_QUEUE_PATH = os.path.join("data", "review_queue.json")
+DEFAULT_QUEUE_PATH = data_path("review_queue.json")
 
 
 @dataclass

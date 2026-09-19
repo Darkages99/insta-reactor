@@ -28,7 +28,9 @@ from dataclasses import dataclass, field, asdict
 from .models import Action, RunSummary, CANON_EMOJI
 
 
-DEFAULT_REVIEW_PATH = os.path.join("data", "review.json")
+from .paths import data_path
+
+DEFAULT_REVIEW_PATH = data_path("review.json")
 
 
 def _thumb_name(path) -> str:

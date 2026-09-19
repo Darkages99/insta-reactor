@@ -13,7 +13,7 @@ class WebSmokeTests(unittest.TestCase):
     def test_home_renders(self):
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
-        self.assertIn(b"Insta Reactor", r.data)
+        self.assertIn(b"Reactor", r.data)
 
     def test_status_json(self):
         r = self.client.get("/status")

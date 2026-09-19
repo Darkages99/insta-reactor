@@ -11,9 +11,10 @@ import os
 from dataclasses import dataclass, field
 
 from .models import Profile, Settings
+from .paths import data_path
 
 
-DEFAULT_CONFIG_PATH = os.path.join("data", "config.json")
+DEFAULT_CONFIG_PATH = data_path("config.json")
 
 
 @dataclass

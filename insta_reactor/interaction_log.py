@@ -32,10 +32,11 @@ from typing import Iterable, Iterator, Optional
 
 from .engine.comment_filter import reactable
 from .engine.normalize import extract_emojis, strip_variation
+from .paths import data_path
 
 log = logging.getLogger("insta_reactor.interaction_log")
 
-DEFAULT_LOG_PATH = os.path.join("data", "interaction_log.jsonl")
+DEFAULT_LOG_PATH = data_path("interaction_log.jsonl")
 
 
 def _comment_hash(chat_name: str, comments) -> str:
